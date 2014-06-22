@@ -67,6 +67,8 @@ class BitmapFont
 
   charsDefined: -> Object.keys(@chars).map((c) -> parseInt(c)).sort((a, b) -> a - b)
 
+  cellWidth: (char) -> @chars[char][0].length
+
   # returns an array of ascii lines filled with @ or space
   dumpToAscii: (lineWidth = 80) ->
     buffer = [ [] ]
@@ -96,22 +98,3 @@ isOn = (pixel) -> toGray(pixel) >= 0.5
 exports.BE = BE
 exports.BitmapFont = BitmapFont
 exports.LE = LE
-
-
-
-
-# # scan a char cell, left to right, bottom to top, so that we have a word for
-# # each column (left to right), with the LSB being the top bit.
-# decodeFontChar = (framebuffer, x, y, width, height) ->
-#   cols = []
-#   for px in [0 ... width]
-#     ch = 0
-#     for py in [0 ... height]
-#       pixel = framebuffer[y + height - py - 1][x + px]
-#       ch = (ch << 1) | (if (pixel & 0xffffff) == 0 then 1 else 0)
-#     cols.push ch
-#   # for proportional fonts, remove redundant empty cols on the right
-#   while cols.length > 1 and cols[cols.length - 1] == 0 then cols = cols[... cols.length - 1]
-#   # what about "space"? for a proportional font, use 2/3 the total width
-#   if cols.length == 1 and cols[0] == 0 then cols = (for i in [0 ... Math.round(width / 2)] then 0)
-#   cols
