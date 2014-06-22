@@ -5,7 +5,8 @@
   "main": "lib/",
   "dependencies": {
     "antsy": "*",
-    "sprintf": "*"
+    "sprintf": "*",
+    "yargs": "*"
   },
   "devDependencies": {
     "coffee-script": "*",

@@ -4,31 +4,57 @@ antsy = require "antsy"
 bmp = require "./bmp"
 bitmap_font = require "./bitmap_font"
 fs = require "fs"
+path = require "path"
 sprintf = require "sprintf"
 util = require "util"
+yargs = require "yargs"
+
+
+USAGE = """
+$0 [options] <bmp-file>
+    Read a font out of a bitmap file, and optionally generate a font file in
+    various (mostly made-up) formats. The bitmap is assumed to be a grid of
+    glyph cells, and the cell size can usually be guessed by an advanced AI.
+"""
 
 main = ->
-  if process.argv.length < 4
-    console.log "usage: generate_font <bmp-file> <font-name>"
-    console.log "    creates a matrix font in <font-name>.h"
+  options = yargs
+    .usage(USAGE)
+    .example("$0 -m tom-thumb.bmp -A", "read a font and display it as ascii art")
+    .options("monospace", alias: "m", describe: "treat font as monospace")
+    .options("ascii", alias: "A", describe: "dump the font back out as ascii art")
+    .options("header", alias: "H", describe: "dump a header file in 'matrix LED' format")
+    .boolean([ "monospace", "ascii" ])
+
+  argv = options.argv
+  filenames = argv._
+  if filenames.length < 1
+    options.showHelp()
     process.exit 1
-  framebuffer = bmp.readBmp(process.argv[2])
-  font = decodeFont(framebuffer)
-  for line in font.font.dumpToAscii(if process.stdout.isTTY then process.stdout.columns else 80) then console.log line
-  for k, v of font.font.packIntoRows(bitmap_font.BE)
-    console.log sprintf("%3d: ", parseInt(k)) + v.map((row) -> sprintf("%02x", row)).join(" ")
+  for filename in filenames
+    name = path.basename(filename, path.extname(filename)).replace(/[^\w]/g, "_")
+    framebuffer = bmp.readBmp(filename)
+    font = decodeFont(framebuffer, argv.monospace)
+    if argv.ascii
+      for line in font.dumpToAscii(if process.stdout.isTTY then process.stdout.columns else 80) then console.log line
+    if argv.header?
+      fs.writeFileSync(argv.header, generateHeaderFile(font, name))
+      console.log "Wrote: #{argv.header}"
+
+    # for k, v of font.font.packIntoRows(bitmap_font.BE)
+    #   console.log sprintf("%3d: ", parseInt(k)) + v.map((row) -> sprintf("%02x", row)).join(" ")
 #  dumpFont(font, process.argv[3])
 
-decodeFont = (framebuffer) ->
+decodeFont = (framebuffer, isMonospace) ->
   [ cellWidth, cellHeight ] = sniffBoundaries(framebuffer)
   console.log "Assuming cell dimensions #{cellWidth} x #{cellHeight}"
   charRows = framebuffer.height / cellHeight
   charColumns = framebuffer.width / cellWidth
-  font = new bitmap_font.BitmapFont()
+  font = new bitmap_font.BitmapFont(isMonospace)
   for y in [0 ... charRows]
     for x in [0 ... charColumns]
       font.getFromFramebuffer(y * charColumns + x, framebuffer, x * cellWidth, y * cellHeight, cellWidth, cellHeight)
-  { cellHeight, cellWidth, font }
+  font
 
 # detect cell boundaries by finding rows & columns that are mostly on
 sniffBoundaries = (framebuffer) ->
@@ -61,6 +87,20 @@ detectSpacing = (lines, range) ->
 # generate a header file for the LED matrix: left to right, bottom to top,
 # a word for each column, with the LSB being the top bit.
 generateHeaderFile = (font, name) ->
+  text = ""
+  lookups = [ 0 ]
+  total = 0
+  chars = font.packIntoColumns(font.LE)
+  for char, cell of chars
+    total += cell.length
+    lookups.push total
+  text += "const int #{name}_font_height = #{font.cellHeight};\n"
+  text += "const int #{name}_font_offsets[#{Object.keys(chars).length + 1}] = { " + lookups.join(", ") + " };\n"
+  text += "const int #{name}_font_data[#{total}] = {\n"
+  for char, cell of chars
+    text += "  " + (for col in cell then sprintf("0x%08x", col)).join(", ") + ", \n"
+  text += "};\n"
+  text
 
 
 
@@ -92,13 +132,10 @@ dumpFont = (font, name) ->
   text += "const int #{name}_font_offsets[#{font.chars.length + 1}] = { " + lookups.join(", ") + " };\n"
   text += "const int #{name}_font_data[#{total}] = {\n"
   for ch in font.chars
-    text += "  " + (for col in ch then hexl(col)).join(", ") + ", \n"
+    text += "  " + (for col in ch then sprintf("0x%08x", col)).join(", ") + ", \n"
   text += "};\n"
   fs.writeFileSync("src/#{name}_font.h", text)
 
-hexl = (i) ->
-  hex = "000000" + i.toString(16)
-  "0x" + hex[hex.length - 6 ...]
 
 displayFont = (font) ->
   framebuffer = (for i in [0 ... font.cellHeight] then [])
