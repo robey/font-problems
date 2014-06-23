@@ -14,6 +14,9 @@
     "plz": "*",
     "should": "*"
   },
+  "scripts": {
+    "plz": "./node_modules/.bin/plz -v build"
+  },
   "author": "Robey Pointer <robeypointer@gmail.com>",
   "license": "Apache-2"
 }

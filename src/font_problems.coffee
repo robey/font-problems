@@ -9,7 +9,6 @@ sprintf = require "sprintf"
 util = require "util"
 yargs = require "yargs"
 
-
 USAGE = """
 $0 [options] <bmp-file>
     Read a font out of a bitmap file, and optionally generate a font file in
@@ -21,10 +20,12 @@ main = ->
   yargs = yargs
     .usage(USAGE)
     .example("$0 -m tom-thumb.bmp -A", "read a font and display it as ascii art")
+    .example("$0 -m lola.bmp -P lola.psf -m 0-127,x2500-", "generate a PSF with the first 128 chars as ascii, then the next 128 starting at 0x2500")
     .options("monospace", alias: "m", describe: "treat font as monospace")
     .options("ascii", alias: "A", describe: "dump the font back out as ascii art")
     .options("header", alias: "H", describe: "dump a header file in 'matrix LED' format")
     .options("psf", alias: "P", describe: "dump a PSF v2 file (linux console format)")
+    .options("map", describe: "comma-separated list of unicode ranges for PSF files", default: "0-")
     .boolean([ "monospace", "ascii" ])
 
   options = yargs.argv
@@ -34,20 +35,40 @@ main = ->
     process.exit 1
   # PSF files must be monospace.
   if options.psf? then options.monospace = true
+  generator = parseRanges(options.map)
   for filename in filenames
     name = path.basename(filename, path.extname(filename)).replace(/[^\w]/g, "_")
     framebuffer = bmp.readBmp(filename)
-    font = decodeFont(framebuffer, options.monospace)
+    font = decodeFont(framebuffer, options.monospace, generator)
     if options.ascii
       for line in font.dumpToAscii(if process.stdout.isTTY then process.stdout.columns else 80) then console.log line
     if options.header?
       fs.writeFileSync(options.header, generateHeaderFile(font, name))
       console.log "Wrote header: #{options.header}"
     if options.psf?
-      fs.writeFileSync(options.psf, generatePsf(font))
+      fs.writeFileSync(options.psf, generatePsf(font, true))
       console.log "Wrote PSF: #{options.psf}"
 
-decodeFont = (framebuffer, isMonospace) ->
+parseRanges = (s) ->
+  blocks = s.split(",").map (range) ->
+    m = range.trim().match(/(x[\da-f]+|\d+)(\-(x[\da-f]+|\d+)?)?/)
+    start = parsePossibleHex(m[1])
+    end = if m[3]? then parsePossibleHex(m[3]) else start
+    { start, end }
+  # return a function that generates unicode ranges
+  nextUp = blocks[0].start
+  ->
+    rv = nextUp
+    nextUp += 1
+    if blocks.length > 1 and nextUp > blocks[0].end
+      blocks.shift()
+      nextUp = blocks[0].start
+    rv
+
+parsePossibleHex = (s) ->
+  if s[0] == "x" then parseInt(s[1...], 16) else parseInt(s)
+
+decodeFont = (framebuffer, isMonospace, generator) ->
   [ cellWidth, cellHeight ] = sniffBoundaries(framebuffer)
   console.log "Assuming cell dimensions #{cellWidth} x #{cellHeight}"
   charRows = framebuffer.height / cellHeight
@@ -55,7 +76,7 @@ decodeFont = (framebuffer, isMonospace) ->
   font = new bitmap_font.BitmapFont(isMonospace)
   for y in [0 ... charRows]
     for x in [0 ... charColumns]
-      font.getFromFramebuffer(y * charColumns + x, framebuffer, x * cellWidth, y * cellHeight, cellWidth, cellHeight)
+      font.getFromFramebuffer(generator(), framebuffer, x * cellWidth, y * cellHeight, cellWidth, cellHeight)
   font
 
 # detect cell boundaries by finding rows & columns that are mostly on

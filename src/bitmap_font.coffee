@@ -1,3 +1,4 @@
+sprintf = require "sprintf"
 util = require "util"
 
 LE = "little-endian"
@@ -86,6 +87,8 @@ class BitmapFont
           buffer[bufferY + y].push(if cell[y][x] == 1 then "@" else " ")
         # space between chars
         if not @isMonospace then buffer[bufferY + y].push " "
+      if not buffer[bufferY + height]? then buffer[bufferY + height] = []
+      buffer[bufferY + height].push sprintf("%-#{width}x", char)
     buffer.map (line) -> line.join("")
 
 toGray = (pixel) ->
