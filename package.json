@@ -1,7 +1,11 @@
 {
-  "name": "font-tools",
+  "name": "font-problems",
   "version": "1.0.0",
   "description": "command-line tools for font formats",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/robey/font-problems.git"
+  },
   "main": "lib/",
   "dependencies": {
     "antsy": "*",
@@ -14,6 +18,13 @@
     "plz": "*",
     "should": "*"
   },
+  "files": [
+    "build.plz",
+    "lib",
+    "bin",
+    "fonts",
+    "*.sh"
+  ],
   "scripts": {
     "plz": "./node_modules/.bin/plz -v build"
   },
