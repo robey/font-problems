@@ -11,6 +11,8 @@ It expects the fonts to be painted into a grid in a BMP file, and will detect th
 
 Each int is a single column of pixels, with the LSB at the top. The columns are listed left-to-right. Having the LSB at the top may seem weird, but it allows for fast decoding if you draw top-to-bottom: each pixel can mask off the lowest bit and then shift right one place.
 
+In the BMP file, glyphs that aren't as wide as the cell should be pushed up against the left edge. Font-problems will detect the whitespace on the right edge, and remove it.
+
 ## PSF files
 
 PSF file format is described here: http://www.win.tue.nl/~aeb/linux/kbd/font-formats-1.html
