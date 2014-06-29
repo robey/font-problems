@@ -11,17 +11,20 @@ BE = "big-endian"
 class BitmapFont
   constructor: (@isMonospace = false) ->
     @chars = {}
+    @order = []
+
+  add: (char, cell) ->
+    @chars[char] = cell
+    @order.push char
+    if not @cellHeight? then @cellHeight = cell.length
 
   # read a character cell out of a framebuffer, given (x, y) offset and
   # width, height.
   # black or dark cells are considered "on".
   getFromFramebuffer: (char, framebuffer, xOffset, yOffset, width, height) ->
-    rows = []
-    for py in [0 ... height]
-      cols = []
-      for px in [0 ... width]
-        cols.push(if framebuffer.isOn(xOffset + px, yOffset + py) then 0 else 1)
-      rows.push cols
+    rows = [0 ... height].map (py) ->
+      [0 ... width].map (px) ->
+        if framebuffer.isOn(xOffset + px, yOffset + py) then 0 else 1
 
     # for proportional fonts, remove redundant empty cols on the right
     if not @isMonospace
@@ -31,8 +34,7 @@ class BitmapFont
       if rows[0].length == 1 and rows.map((row) -> row[row.length - 1]).reduce((a, b) -> a + b) == 0
         rows = [0 ... rows.length].map (i) -> ([0 ... Math.round(width / 2)].map (j) -> 0)
 
-    @chars[char] = rows
-    @cellHeight = height
+    @add char, rows
 
   # pack each glyph into an array of ints, each int as one row.
   # LE = smallest bit on the left
@@ -66,7 +68,7 @@ class BitmapFont
         line
     rv
 
-  charsDefined: -> Object.keys(@chars).map((c) -> parseInt(c)).sort((a, b) -> a - b)
+  charsDefined: -> @order
 
   cellWidth: (char) -> @chars[char][0].length
 
@@ -97,7 +99,20 @@ toGray = (pixel) ->
 
 isOn = (pixel) -> toGray(pixel) >= 0.5
 
+# unpack each glyph from an array of ints, each int as one row.
+# LE = smallest bit on the left
+# BE = smallest bit on the right
+unpackRows = (rows, cellWidth, direction = LE) ->
+  rows.map (row) ->
+    if direction == BE and cellWidth % 8 != 0
+      # remove padding from the right
+      row >>= (8 - cellWidth % 8)
+    row = [0 ... cellWidth].map (i) -> (row >> i) & 0x01
+    if direction == BE then row = row.reverse()
+    row
+
 
 exports.BE = BE
 exports.BitmapFont = BitmapFont
 exports.LE = LE
+exports.unpackRows = unpackRows
