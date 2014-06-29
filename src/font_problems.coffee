@@ -5,6 +5,7 @@ bmp = require "./bmp"
 bitmap_font = require "./bitmap_font"
 fs = require "fs"
 path = require "path"
+psf = require "./psf"
 sprintf = require "sprintf"
 util = require "util"
 yargs = require "yargs"
@@ -20,13 +21,16 @@ main = ->
   yargs = yargs
     .usage(USAGE)
     .example("$0 -m tom-thumb.bmp -A", "read a font and display it as ascii art")
-    .example("$0 -m lola.bmp -P lola.psf -m 0-127,x2500-", "generate a PSF with the first 128 chars as ascii, then the next 128 starting at 0x2500")
+    .example("$0 -m lola.bmp -P -m 0-127,x2500-", "generate a PSF with the first 128 chars as ascii, then the next 128 starting at 0x2500")
     .options("monospace", alias: "m", describe: "treat font as monospace")
     .options("ascii", alias: "A", describe: "dump the font back out as ascii art")
     .options("header", alias: "H", describe: "dump a header file in 'matrix LED' format")
     .options("psf", alias: "P", describe: "dump a PSF v2 file (linux console format)")
+    .options("fmap", alias: "F", describe: "also dump out an fmap file of codepoint maps")
+    .options("import", alias: "i", describe: "import font from an existing PSF file")
+    .options("o", describe: "output file")
     .options("map", describe: "comma-separated list of unicode ranges for PSF files", default: "0-")
-    .boolean([ "monospace", "ascii" ])
+    .boolean([ "monospace", "ascii", "header", "psf", "fmap", "import" ])
 
   options = yargs.argv
   filenames = options._
@@ -38,18 +42,32 @@ main = ->
   generator = parseRanges(options.map)
   for filename in filenames
     name = path.basename(filename, path.extname(filename)).replace(/[^\w]/g, "_")
-    framebuffer = bmp.readBmp(filename)
-    font = decodeFont(framebuffer, options.monospace, generator)
+    outname = options.o
+    font = if options.import
+      psf.read(fs.readFileSync(filename))
+    else
+      decodeFont(bmp.readBmp(filename), options.monospace, generator)
     if options.ascii
       for line in font.dumpToAscii(if process.stdout.isTTY then process.stdout.columns else 80) then console.log line
-    if options.header?
-      fs.writeFileSync(options.header, generateHeaderFile(font, name))
-      console.log "Wrote header: #{options.header}"
-    if options.psf?
-      fs.writeFileSync(options.psf, generatePsf(font, true))
-      console.log "Wrote PSF: #{options.psf}"
+    if options.header
+      if not outname? then outname = replaceExtension(filename, "h")
+      fs.writeFileSync(outname, generateHeaderFile(font, name))
+      console.log "Wrote header: #{outname}"
+    if options.psf
+      if not outname? then outname = replaceExtension(filename, "psf")
+      fs.writeFileSync(outname, psf.write(font, true))
+      console.log "Wrote PSF: #{outname}"
+    if options.fmap
+      if not outname? then outname = filename
+      outname = replaceExtension(outname, "fmap")
+      data = font.charsDefined().map((ch) -> sprintf("x%x", ch)).join("\n") + "\n"
+      fs.writeFileSync(outname, data)
+      console.log "Wrote fmap: #{outname}"
 
 parseRanges = (s) ->
+  if fs.existsSync(s)
+    # it's a file!
+    s = fs.readFileSync(s).toString().trim().split("\n").join(",")
   blocks = s.split(",").map (range) ->
     m = range.trim().match(/(x[\da-f]+|\d+)(\-(x[\da-f]+|\d+)?)?/)
     start = parsePossibleHex(m[1])
@@ -67,6 +85,10 @@ parseRanges = (s) ->
 
 parsePossibleHex = (s) ->
   if s[0] == "x" then parseInt(s[1...], 16) else parseInt(s)
+
+replaceExtension = (filename, newExtension) ->
+  ext = path.extname(filename)
+  path.join(path.dirname(filename), path.basename(filename, ext)) + "." + newExtension
 
 decodeFont = (framebuffer, isMonospace, generator) ->
   [ cellWidth, cellHeight ] = sniffBoundaries(framebuffer)
@@ -123,53 +145,5 @@ generateHeaderFile = (font, name) ->
     text += "  " + (for col in cell then sprintf("0x%08x", col)).join(", ") + ", \n"
   text += "};\n"
   text
-
-PSF_MAGIC = 0x72b54a86
-PSF_VERSION = 0
-PSF_HEADER_SIZE = 32
-PSF_FLAG_HAS_UNICODE_TABLE = 0x01
-PSF_UNICODE_SEPARATOR = 0xff
-PSF_UNICODE_STARTSEQ = 0xfe
-
-# generate a linux PSF (console font) data file
-generatePsf = (font, withMap = false) ->
-  chars = font.charsDefined()
-  if chars.length != 256 and chars.length != 512
-    throw new Error("PSF appears to support only 256 or 512 characters, not #{chars.length}")
-  # PSF files are monospace, so all chars have the same width.
-  cellWidth = font.cellWidth(chars[0])
-  rowsize = Math.ceil(cellWidth / 8)
-  if rowsize > 2 then throw new Error("I don't support such wide glyphs yet (max 16 pixels)")
-  charsize = font.cellHeight * rowsize
-  header = new Buffer(PSF_HEADER_SIZE)
-  header.writeUInt32BE(PSF_MAGIC, 0)
-  header.writeUInt32LE(PSF_VERSION, 4)
-  header.writeUInt32LE(PSF_HEADER_SIZE, 8)
-  header.writeUInt32LE((if withMap then PSF_FLAG_HAS_UNICODE_TABLE else 0), 12) # flags
-  header.writeUInt32LE(chars.length, 16)
-  header.writeUInt32LE(charsize, 20)
-  header.writeUInt32LE(font.cellHeight, 24)
-  header.writeUInt32LE(cellWidth, 28)
-  # now write glyph data and unicode data
-  data = new Buffer(chars.length * charsize)
-  mapData = new Buffer(chars.length * 5)
-  i = 0
-  mi = 0
-  for char, rows of font.packIntoRows(bitmap_font.BE)
-    for row in rows
-      if rowsize > 1
-        data.writeUInt8((row >> 8) & 0xff, i)
-        i += 1
-      data.writeUInt8(row & 0xff, i)
-      i += 1
-    if withMap
-      ch = utf8(char)
-      ch.copy(mapData, mi)
-      mi += ch.length
-      mapData.writeUInt8(PSF_UNICODE_SEPARATOR, mi)
-      mi += 1
-  Buffer.concat([ header, data, mapData.slice(0, mi) ])
-
-utf8 = (n) -> new Buffer(String.fromCharCode(n), "UTF-8")
 
 exports.main = main
