@@ -36,6 +36,13 @@ class BitmapFont
 
     @add char, rows
 
+  drawToFramebuffer: (char, framebuffer, xOffset, yOffset, offColor, onColor) ->
+    rows = @chars[char]
+    for py in [0 ... rows.length]
+      row = rows[py]
+      for px in [0 ... row.length]
+        framebuffer.putPixel(xOffset + px, yOffset + py, if row[px] == 1 then onColor else offColor)
+
   # pack each glyph into an array of ints, each int as one row.
   # LE = smallest bit on the left
   # BE = smallest bit on the right

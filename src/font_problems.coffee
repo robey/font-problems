@@ -27,6 +27,7 @@ main = ->
     .options("header", alias: "H", describe: "dump a header file in 'matrix LED' format")
     .options("psf", alias: "P", describe: "dump a PSF v2 file (linux console format)")
     .options("fmap", alias: "F", describe: "also dump out an fmap file of codepoint maps")
+    .options("bmp", alias: "B", describe: "also write a BMP of the font")
     .options("import", alias: "i", describe: "import font from an existing PSF file")
     .options("o", describe: "output file")
     .options("map", describe: "comma-separated list of unicode ranges for PSF files", default: "0-")
@@ -63,6 +64,16 @@ main = ->
       data = font.charsDefined().map((ch) -> sprintf("x%x", ch)).join("\n") + "\n"
       fs.writeFileSync(outname, data)
       console.log "Wrote fmap: #{outname}"
+    if options.bmp
+      if not outname? then outname = filename
+      outname = replaceExtension(outname, "bmp")
+      cellWidth = font.cellWidth(font.charsDefined()[0])
+      framebuffer = new bmp.Framebuffer(null, cellWidth * 32, font.cellHeight * 8, 24)
+      for ch, i in font.charsDefined()
+        font.drawToFramebuffer(ch, framebuffer, (i % 32) * cellWidth, Math.floor(i / 32) * font.cellHeight, 0xffffff, 0)
+      data = bmp.writeBmp(framebuffer)
+      fs.writeFileSync(outname, data)
+      console.log "Wrote bmp: #{outname}"
 
 parseRanges = (s) ->
   if fs.existsSync(s)

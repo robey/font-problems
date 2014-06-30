@@ -39,10 +39,40 @@ readBmp = (filename) ->
   if not topToBottom then pixels = pixels.reverse()
   new Framebuffer(pixels, pixelWidth, pixelHeight, colorDepth)
 
+writeBmp = (framebuffer) ->
+  header = new Buffer(54)
+  header.writeUInt8(BMP_HEADER[0], 0)
+  header.writeUInt8(BMP_HEADER[1], 1)
+  header.writeUInt32LE(54, 10) # offset of actual data
+  header.writeUInt32LE(40, 14) # size of 2nd header
+  header.writeUInt32LE(framebuffer.width, 18)
+  header.writeUInt32LE(framebuffer.height, 22)
+  header.writeUInt16LE(1, 26)  # "color planes"
+  header.writeUInt16LE(framebuffer.depth, 28)
+  header.writeUInt32LE(0, 30)  # no compression
+  header.writeUInt32LE(0, 34)  # no size hint
+  header.writeUInt32LE(300, 38)  # pixels per meter?
+  header.writeUInt32LE(300, 42)  # pixels per meter?
+  header.writeUInt32LE(0, 46)  # palette color count
+  header.writeUInt32LE(0, 50)  # "important" color count
+  rows = [0 ... framebuffer.height].map (y) ->
+    buffer = new Buffer(Math.ceil(framebuffer.depth * framebuffer.width / 32) * 4)
+    offset = 0
+    for x in [0 ... framebuffer.width]
+      pixel = framebuffer.getPixel(x, y)
+      switch framebuffer.depth
+        when 32 then buffer.writeUInt32LE(pixel, offset)
+        when 24
+          buffer.writeUInt16LE(pixel & 0xffff, offset)
+          buffer.writeUInt8((pixel >> 16) & 0xff, offset + 2)
+      offset += framebuffer.depth / 8
+    buffer
+  Buffer.concat([ header ].concat(rows.reverse()))
 
 class Framebuffer
   # pixels are in [y][x] order, top to bottom, left to right
   constructor: (@pixels, @width, @height, @depth) ->
+    if not @pixels? then @pixels = [0 ... @height].map (y) -> ([0 ... @width].map (x) -> 0)
 
   toGray: (x, y) ->
     # 0.21 R + 0.72 G + 0.07 B
@@ -62,6 +92,13 @@ class Framebuffer
         brightness += @toGray(x, y)
     brightness / count
 
+  putPixel: (x, y, color) ->
+    @pixels[y][x] = color
+
+  getPixel: (x, y) ->
+    @pixels[y][x]
+
 
 exports.Framebuffer = Framebuffer
 exports.readBmp = readBmp
+exports.writeBmp = writeBmp
