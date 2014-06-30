@@ -19,14 +19,16 @@ PSF file format is described here: http://www.win.tue.nl/~aeb/linux/kbd/font-for
 
 Each glyph must be the same width and height in a PSF file (monospace), and exactly 256 or 512 characters must be defined. BIOS only supports a glyph width of 8, so only framebuffers can use smaller widths. (Linux still uses BIOS to draw text in a surprising number of cases.)
 
-Font-problems will generate a simple unicode mapping table for PSF files, which you can specify with "--map". In the future, this should probably also accept a json file.
+Font-problems will generate a simple unicode mapping table for PSF files, which you can specify with "--map". The argument to "--map" can be a sequence of code point ranges, or it can be the name of a filename with this list in it (called an "fmap file"). Some sample fmap files are included with the sample fonts.
 
 ## Sample fonts
 
-Two sample fonts are included:
+Three sample fonts are included:
 
 - "Tom Thumb" from [my blog](http://robey.lag.net/2010/01/23/tiny-monospace-font.html), with some line-drawing and block characters added, for console tools like Midnight Commander. Each cell is 4x6, which I believe is the smallest a bitmap font can be, and still have any legibility.
 
-- "Lola" is a simple proportional font, 8 pixels tall, with up to 6 pixels width. It was designed to work on LED matrix displays like [this one](https://learn.adafruit.com/32x16-32x32-rgb-led-matrix).
+- "Lola" is a simple proportional font, 9 pixels tall, with up to 6 pixels width. It was designed to work on LED matrix displays like [this one](https://learn.adafruit.com/32x16-32x32-rgb-led-matrix).
 
-Both fonts are licensed as Creative Commons "share & adapt": http://creativecommons.org/licenses/by/4.0/ -- I'd also love to see any modifications or additions, to possibly merge them back in.
+- "Lola12" is a larger monospace font, 6x12, meant for use on larger Linux terminals, or where more legibility is desired. It's roughly equivalent to the smallest standard Linux console font (Terminus12) but looks nicer IMHO.
+
+All of these fonts are licensed as Creative Commons "share & adapt": http://creativecommons.org/licenses/by/4.0/ -- I'd also love to see any modifications or additions, to possibly merge them back in.
