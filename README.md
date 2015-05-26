@@ -27,7 +27,7 @@ Three sample fonts are included:
 
 - "Tom Thumb" from [my blog](http://robey.lag.net/2010/01/23/tiny-monospace-font.html), with some line-drawing and block characters added, for console tools like Midnight Commander. Each cell is 4x6, which I believe is the smallest a bitmap font can be, and still have any legibility.
 
-- "Lola" is a simple proportional font, 9 pixels tall, with up to 6 pixels width. It was designed to work on LED matrix displays like [this one](https://learn.adafruit.com/32x16-32x32-rgb-led-matrix).
+- "Lola" is a simple proportional font, ranging from 4x8 to 6x8. It was designed to work on LED matrix displays like [this one](https://learn.adafruit.com/32x16-32x32-rgb-led-matrix).
 
 - "Lola12" is a larger monospace font, 6x12, meant for use on larger Linux terminals, or where more legibility is desired. It's roughly equivalent to the smallest standard Linux console font (Terminus12) but looks nicer IMHO.
 
