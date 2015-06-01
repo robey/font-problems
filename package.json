@@ -10,14 +10,14 @@
   "dependencies": {
     "antsy": "*",
     "lodash": "*",
-    "sprintf": "*",
-    "yargs": "*"
+    "minimist": "*",
+    "source-map-support": "*",
+    "sprintf": "*"
   },
   "devDependencies": {
     "babel": "*",
     "mocha": "*",
-    "should": "*",
-    "source-map-support": "*"
+    "should": "*"
   },
   "files": [
     "lib",

@@ -1,6 +1,7 @@
 "use strict";
 
 const sprintf = require("sprintf");
+const unicodes = require("./unicodes");
 const util = require("util");
 const _ = require("lodash");
 
@@ -29,7 +30,7 @@ class BitmapFont {
   get(char) {
     return this.chars[char];
   }
-  
+
   /*
    * read a character cell out of a framebuffer, given (x, y) offset and
    * (width, height). black or dark cells are considered "on".
@@ -67,37 +68,55 @@ class BitmapFont {
     }
   }
 
-//   # pack each glyph into an array of ints, each int as one row.
-//   # LE = smallest bit on the left
-//   # BE = smallest bit on the right
-//   packIntoRows: (direction = LE) ->
-//     rv = {}
-//     for char, rows of @chars
-//       rv[char] = rows.map (row) ->
-//         line = 0
-//         for x in [0 ... row.length]
-//           line = (line << 1) | row[if direction == LE then row.length - x - 1 else x]
-//         if direction == BE and row.length % 8 != 0
-//           # pad on the right so the left pixel aligns with a byte boundary!
-//           line <<= (8 - row.length % 8)
-//         line
-//     rv
-//
-//   # pack each glyph into an array of ints, each int as one column.
-//   # LE = smallest bit on top
-//   # BE = smallest bit on bottom
-//   packIntoColumns: (direction = LE) ->
-//     rv = {}
-//     for char, rows of @chars
-//       rv[char] = [0 ... rows[0].length].map (x) ->
-//         line = 0
-//         for y in [0 ... rows.length]
-//           line = (line << 1) | rows[if direction == LE then rows.length - y - 1 else y][x]
-//         if direction == BE and rows.length % 8 != 0
-//           # pad on the bottom so the top pixel aligns with a byte boundary!
-//           line <<= (8 - rows.length % 8)
-//         line
-//     rv
+  // pack each glyph into an array of ints, each int as one row.
+  // LE = smallest bit on the left
+  // BE = smallest bit on the right
+  packIntoRows(direction = LE) {
+    const rv = {};
+    for (let char in this.chars) {
+      const cell = this.chars[char];
+      const cellWidth = cell.length / this.cellHeight;
+      rv[char] = [];
+      for (let y = 0; y < this.cellHeight; y++) {
+        let line = 0;
+        for (let x = 0; x < cellWidth; x++) {
+          const px = direction == LE ? cellWidth - x - 1 : x;
+          line = (line << 1) | cell[y * cellWidth + px];
+        }
+        if (direction == BE && cellWidth % 8 != 0) {
+          // pad on the right so the left pixel aligns with a byte boundary!
+          line <<= (8 - cellWidth % 8);
+        }
+        rv[char].push(line);
+      }
+    }
+    return rv;
+  }
+
+  // pack each glyph into an array of ints, each int as one column.
+  // LE = smallest bit on top
+  // BE = smallest bit on bottom
+  packIntoColumns(direction = LE) {
+    const rv = {};
+    for (let char in this.chars) {
+      const cell = this.chars[char];
+      const cellWidth = cell.length / this.cellHeight;
+      rv[char] = [];
+      for (let x = 0; x < cellWidth; x++) {
+        let line = 0;
+        for (let y = 0; y < this.cellHeight; y++) {
+          const py = direction == LE ? this.cellHeight - y - 1 : y;
+          line = (line << 1) | cell[py * cellWidth + x];
+        }
+        if (direction == BE && this.cellHeight % 8 != 0) {
+          // pad on the bottom so the top pixel aligns with a byte boundary!
+          line <<= (8 - this.cellHeight % 8);
+        }
+        rv[char].push(line);
+      }
+    }
+    return rv;
+  }
 
   charsDefined() {
     return this.order;
@@ -107,33 +126,57 @@ class BitmapFont {
     return this.chars[char].length / this.cellHeight;
   }
 
-//   # returns an array of ascii lines filled with @ or space
-//   dumpToAscii: (lineWidth = 80) ->
-//     buffer = [ [] ]
-//     bufferY = 0
-//     for char in @charsDefined()
-//       cell = @chars[char]
-//       width = cell[0].length
-//       height = cell.length
-//       if buffer[bufferY].length + width >= lineWidth
-//         # new "virtual line"
-//         bufferY = buffer.length
-//       for y in [0 ... height]
-//         if not buffer[bufferY + y]? then buffer[bufferY + y] = []
-//         for x in [0 ... width]
-//           buffer[bufferY + y].push(if cell[y][x] == 1 then "@" else " ")
-//         # space between chars
-//         if not @isMonospace then buffer[bufferY + y].push " "
-//       if not buffer[bufferY + height]? then buffer[bufferY + height] = []
-//       buffer[bufferY + height].push sprintf("%-#{width}x", char)
-//     buffer.map (line) -> line.join("")
-//
-// toGray = (pixel) ->
-//   # 0.21 R + 0.72 G + 0.07 B
-//   0.21 * ((pixel >> 16) & 0xff) + 0.72 * ((pixel >> 8) & 0xff) + 0.07 * (pixel & 0xff)
-//
-// isOn = (pixel) -> toGray(pixel) >= 0.5
-//
+  // returns an array of ascii lines filled with @ or space
+  dumpToAscii(lineWidth = 80) {
+    const buffer = [ ];
+    let bufferY = 0;
+    this.charsDefined().forEach(char => {
+      const cell = this.chars[char];
+      const width = this.cellWidth(char);
+      const height = this.cellHeight;
+      if (!buffer[bufferY] || buffer[bufferY].length + width >= lineWidth) {
+        // new "virtual line"
+        bufferY = buffer.length;
+      }
+      for (let y = 0; y < height; y++) {
+        if (!buffer[bufferY + y]) buffer[bufferY + y] = [];
+        for (let x = 0; x < width; x++) {
+          buffer[bufferY + y].push(cell[y * width + x] > 0 ? "@" : " ");
+        }
+        // space between chars
+        if (!this.isMonospace) buffer[bufferY + y].push(" ");
+      }
+      if (!buffer[bufferY + height]) buffer[bufferY + height] = [];
+      buffer[bufferY + height].push(sprintf(`%-${width}x`, char));
+    });
+    return buffer.map(line => line.join(""));
+  }
+
+  /*
+   * generate a header file for the LED matrix: left to right, bottom to top,
+   * a word for each column, with the LSB being the top bit.
+   */
+  generateHeaderFile(name) {
+    let text = "";
+    const lookups = [ 0 ];
+    let total = 0;
+    const chars = this.packIntoColumns(LE);
+    for (let char in chars) {
+      const cell = chars[char];
+      total += cell.length;
+      lookups.push(total);
+    }
+    text += `const int ${name}_font_height = ${this.cellHeight};\n`;
+    text += `const int ${name}_font_offsets[${Object.keys(chars).length + 1}] = { ${lookups.join(", ")} };\n`;
+    text += `const int ${name}_font_data[${total}] = {\n`;
+    for (let char in chars) {
+      const cell = chars[char];
+      text += "  " + cell.map(col => sprintf("0x%06x", col)).join(", ") + ", \n";
+    }
+    text += "};\n";
+    return text;
+  }
+
 // # unpack each glyph from an array of ints, each int as one row.
 // # LE = smallest bit on the left
 // # BE = smallest bit on the right
@@ -149,8 +192,50 @@ class BitmapFont {
 //
 }
 
+/*
+ * load a bitmap font from a framebuffer.
+ * the font must be in a regular grid. (for proportional fonts, align the left
+ * edges and leave the extra space on the right.) the grid dimensions can be
+ * determined heuristically if they aren't provided.
+ *
+ * the unicode code-point generator should be some function (usually provided
+ * by one of the helpers in `unicodes.js`) that provides the sequence of code
+ * points (as numbers) to assign to each glyph in order. the default generator
+ * starts from code-point zero.
+ *
+ * options:
+ * - cellWidth: width of each cell in the grid (default: guess)
+ * - cellHeight: height of each cell in the grid (default: guess)
+ * - isMonospace: if false, extra padding on the right of each glyph will be
+ *   removed (default: true)
+ * - generator: a function that returns unicode code points (as numbers) to
+ *   assign to each glyph in order
+ */
+function loadFromFramebuffer(framebuffer, options = {}) {
+  if (!(options.cellWidth && options.cellHeight)) {
+    const { width, height } = framebuffer.sniffBoundaries();
+    options.cellWidth = width;
+    options.cellHeight = height;
+  }
+  if (options.isMonospace === undefined) options.isMonospace = true;
+  if (!options.generator) options.generator = unicodes.from(0);
+
+  const charRows = framebuffer.height / options.cellHeight;
+  const charColumns = framebuffer.width / options.cellWidth;
+  const font = new BitmapFont(options.isMonospace);
+  for (let y = 0; y < charRows; y++) {
+    for (let x = 0; x < charColumns; x++) {
+      font.getFromFramebuffer(options.generator(), framebuffer, x * options.cellWidth, y * options.cellHeight, options.cellWidth, options.cellHeight);
+    }
+  }
+  font.gridCellWidth = options.cellWidth;
+  font.gridCellHeight = options.cellHeight;
+  return font;
+}
+
 
 exports.BE = BE;
 exports.BitmapFont = BitmapFont;
 exports.LE = LE;
+exports.loadFromFramebuffer = loadFromFramebuffer;
 // exports.unpackRows = unpackRows

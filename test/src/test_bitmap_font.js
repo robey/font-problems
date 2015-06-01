@@ -63,5 +63,35 @@ describe("BitmapFont", () => {
     bmp.readBmp("fonts/tom-thumb-256.bmp").sniffBoundaries().should.eql({ width: 4, height: 6 });
     bmp.readBmp("fonts/lolathin.bmp").sniffBoundaries().should.eql({ width: 6, height: 8 });
     bmp.readBmp("fonts/lola12.bmp").sniffBoundaries().should.eql({ width: 6, height: 12 });
-  })
+  });
+
+  it("loads from a framebuffer", () => {
+    const font = bitmap_font.loadFromFramebuffer(bmp.readBmp("fonts/lolathin.bmp"), { isMonospace: false });
+    font.isMonospace.should.eql(false);
+    font.cellHeight.should.eql(8);
+    font.gridCellHeight.should.eql(8);
+    font.gridCellWidth.should.eql(6);
+    Object.keys(font.chars).length.should.eql(128);
+    Array.prototype.slice.call(font.chars[33]).map(x => x > 0 ? "+" : "-").join("").should.eql("+++++-+-");
+  });
+
+  it("packs into rows", () => {
+    const font = bitmap_font.loadFromFramebuffer(bmp.readBmp("fonts/tom-thumb-256.bmp"));
+    const little = font.packIntoRows(bitmap_font.LE);
+    little[0x45].should.eql([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ]);
+    little[0x4a].should.eql([ 0x4, 0x4, 0x4, 0x5, 0x2, 0 ]);
+    const big = font.packIntoRows(bitmap_font.BE);
+    big[0x45].should.eql([ 0xe0, 0x80, 0xe0, 0x80, 0xe0, 0 ]);
+    big[0x4a].should.eql([ 0x20, 0x20, 0x20, 0xa0, 0x40, 0 ]);
+  });
+
+  it("packs into columns", () => {
+    const font = bitmap_font.loadFromFramebuffer(bmp.readBmp("fonts/tom-thumb-256.bmp"));
+    const little = font.packIntoColumns(bitmap_font.LE);
+    little[0x45].should.eql([ 0x1f, 0x15, 0x15, 0 ]);
+    little[0x4a].should.eql([ 0x08, 0x10, 0x0f, 0 ]);
+    const big = font.packIntoColumns(bitmap_font.BE);
+    big[0x45].should.eql([ 0xf8, 0xa8, 0xa8, 0 ]);
+    big[0x4a].should.eql([ 0x10, 0x08, 0xf0, 0 ]);
+  });
 });
