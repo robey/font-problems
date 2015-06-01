@@ -177,19 +177,22 @@ class BitmapFont {
     return text;
   }
 
-// # unpack each glyph from an array of ints, each int as one row.
-// # LE = smallest bit on the left
-// # BE = smallest bit on the right
-// unpackRows = (rows, cellWidth, direction = LE) ->
-//   rows.map (row) ->
-//     if direction == BE and cellWidth % 8 != 0
-//       # remove padding from the right
-//       row >>= (8 - cellWidth % 8)
-//     row = [0 ... cellWidth].map (i) -> (row >> i) & 0x01
-//     if direction == BE then row = row.reverse()
-//     row
-//
-//
+  unpackRows(char, rows, cellWidth, cellHeight, direction = LE) {
+    const cell = new Uint8Array(cellWidth * cellHeight);
+    let index = 0;
+    rows.forEach(row => {
+      if (direction == BE && cellWidth % 8 != 0) {
+        // remove padding from the right
+        row >>= (8 - cellWidth % 8);
+      }
+      for (let i = 0; i < cellWidth; i++) {
+        const px = direction == BE ? cellWidth - i - 1 : i;
+        cell[index] = (row >> px) & 0x01;
+        index += 1;
+      }
+    });
+    this.add(char, cell, cellHeight);
+  }
 }
 
 /*

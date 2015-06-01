@@ -27,6 +27,11 @@ describe("unicodes", () => {
     unicodes.flatten(generator, 10).should.eql([ 9, 10, 11, 32, 33, 34, 99, 4 ]);
   });
 
+  it("handles arrays", () => {
+    const generator = unicodes.fromArray([ 10, 11, 15, 17 ]);
+    unicodes.flatten(generator, 10).should.eql([ 10, 11, 15, 17 ]);
+  });
+
   it("handles infinite ranges", () => {
     const generator = unicodes.fromRanges("9-");
     unicodes.flatten(generator, 5).should.eql([ 9, 10, 11, 12, 13 ]);

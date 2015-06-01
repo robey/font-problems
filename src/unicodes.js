@@ -19,20 +19,9 @@ function fromRanges(line) {
     const m = range.trim().match(/(x[\da-f]+|\d+)(\-(x[\da-f]+|\d+)?)?/);
     const start = parsePossibleHex(m[1]);
     const end = m[3] ? parsePossibleHex(m[3]) : (m[2] ? 0x10ffff : start);
-    return { start, end };
+    return fromRange(start, end);
   });
-
-  let nextUp = blocks[0].start;
-  return () => {
-    const rv = nextUp;
-    if (rv == null) return rv;
-    nextUp += 1;
-    if (nextUp > blocks[0].end) {
-      blocks.shift();
-      nextUp = blocks.length > 0 ? blocks[0].start : null;
-    }
-    return rv;
-  };
+  return concat(blocks);
 }
 
 function fromRange(start, end) {
@@ -58,12 +47,23 @@ function from(start) {
   }
 }
 
+function fromArray(array) {
+  let i = 0;
+  return () => {
+    if (i >= array.length) return null;
+    const rv = array[i];
+    i += 1;
+    return rv;
+  }
+}
+
 /*
  * concat one or more generators.
  */
 function concat(generators) {
   let i = 0;
   function loop() {
+    if (i >= generators.length) return null;
     const rv = generators[i]();
     if (rv == null) {
       i += 1;
@@ -71,6 +71,7 @@ function concat(generators) {
     }
     return rv;
   }
+  return loop;
 }
 
 /*
@@ -90,5 +91,6 @@ function flatten(generator, max = 100) {
 
 exports.flatten = flatten;
 exports.from = from;
+exports.fromArray = fromArray;
 exports.fromRange = fromRange;
 exports.fromRanges = fromRanges;
