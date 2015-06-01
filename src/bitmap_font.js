@@ -61,8 +61,8 @@ class BitmapFont {
   drawToFramebuffer(char, framebuffer, xOffset, yOffset, offColor, onColor) {
     const cell = this.chars[char];
     const cellWidth = cell.length / this.cellHeight;
-    for (py = 0; py < this.cellHeight; py++) {
-      for (px = 0; px < cellWidth; px++) {
+    for (let py = 0; py < this.cellHeight; py++) {
+      for (let px = 0; px < cellWidth; px++) {
         framebuffer.putPixel(xOffset + px, yOffset + py, cell[py * cellWidth + px] > 0 ? onColor : offColor);
       }
     }
@@ -133,6 +133,7 @@ class BitmapFont {
     this.charsDefined().forEach(char => {
       const cell = this.chars[char];
       const width = this.cellWidth(char);
+      const totalWidth = this.isMonospace ? width : width + 1;
       const height = this.cellHeight;
       if (!buffer[bufferY] || buffer[bufferY].length + width >= lineWidth) {
         // new "virtual line"
@@ -147,7 +148,7 @@ class BitmapFont {
         if (!this.isMonospace) buffer[bufferY + y].push(" ");
       }
       if (!buffer[bufferY + height]) buffer[bufferY + height] = [];
-      buffer[bufferY + height].push(sprintf(`%-${width}x`, char));
+      buffer[bufferY + height].push(sprintf(`%-${totalWidth}x`, char));
     });
     return buffer.map(line => line.join(""));
   }

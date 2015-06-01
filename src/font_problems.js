@@ -2,9 +2,12 @@
 
 const bitmap_font = require("./bitmap_font");
 const bmp = require("./bmp");
+const framebuffer = require("./framebuffer");
 const fs = require("fs");
 const minimist = require("minimist");
 const path = require("path");
+const psf = require("./psf");
+const sprintf = require("sprintf");
 const unicodes = require("./unicodes");
 const util = require("util");
 
@@ -101,6 +104,9 @@ function main() {
     const name = path.basename(filename, path.extname(filename)).replace(/[^\w]/g, "_");
     let outname = options.o;
     const font = options.import ? psf.read(fs.readFileSync(filename)) : loadBmp(filename, options);
+    const charCount = Object.keys(font.chars).length;
+
+    console.log(`${charCount} chars, ${font.gridCellWidth || font.cellWidth(0x4d)}x${font.cellHeight}`);
 
     if (options.ascii) {
       font.dumpToAscii(process.stdout.isTTY ? process.stdout.columns : 80).forEach(line => console.log(line));
@@ -110,31 +116,38 @@ function main() {
       fs.writeFileSync(outname, font.generateHeaderFile(name));
       console.log(`Wrote header: ${outname}`);
     }
+    if (options.psf) {
+      if (!outname) outname = replaceExtension(filename, "psf");
+      fs.writeFileSync(outname, psf.write(font, { withMap: true }));
+      console.log(`Wrote PSF: ${outname}`);
+    }
+    if (options.fmap) {
+      if (!outname) outname = filename;
+      outname = replaceExtension(outname, "fmap");
+      const data = font.charsDefined().map(ch => sprintf("x%x", ch)).join("\n") + "\n";
+      fs.writeFileSync(outname, data);
+      console.log(`Wrote fmap: ${outname}`);
+    }
+    if (options.bmp) {
+      if (!outname) outname = filename;
+      outname = replaceExtension(outname, "bmp");
+      const typicalCell = font.chars[0x4d] ? 0x4d : font.charsDefined()[0];
+      const cellWidth = font.cellWidth(typicalCell);
+      const charsDefined = font.charsDefined();
+      const glyphsWide = cellWidth > 8 ? 16 : 32;
+      const glyphsHigh = Math.ceil(font.charsDefined().length / glyphsWide);
+      const fb = new framebuffer.Framebuffer(cellWidth * glyphsWide, font.cellHeight * glyphsHigh, 24);
+
+      for (let i = 0; i < charsDefined.length; i++) {
+        const char = charsDefined[i];
+        const px = (i % glyphsWide) * cellWidth;
+        const py = Math.floor(i / glyphsWide) * font.cellHeight;
+        font.drawToFramebuffer(char, fb, px, py, 0xffffff, 0);
+      }
+      fs.writeFileSync(outname, bmp.writeBmp(fb));
+      console.log(`Wrote bmp: ${outname}`);
+    }
   });
-
-
-
-  //   if options.psf
-  //     if not outname? then outname = replaceExtension(filename, "psf")
-  //     fs.writeFileSync(outname, psf.write(font, true))
-  //     console.log "Wrote PSF: #{outname}"
-  //   if options.fmap
-  //     if not outname? then outname = filename
-  //     outname = replaceExtension(outname, "fmap")
-  //     data = font.charsDefined().map((ch) -> sprintf("x%x", ch)).join("\n") + "\n"
-  //     fs.writeFileSync(outname, data)
-  //     console.log "Wrote fmap: #{outname}"
-  //   if options.bmp
-  //     if not outname? then outname = filename
-  //     outname = replaceExtension(outname, "bmp")
-  //     cellWidth = font.cellWidth(font.charsDefined()[0])
-  //     framebuffer = new bmp.Framebuffer(null, cellWidth * 32, font.cellHeight * 8, 24)
-  //     for ch, i in font.charsDefined()
-  //       font.drawToFramebuffer(ch, framebuffer, (i % 32) * cellWidth, Math.floor(i / 32) * font.cellHeight, 0xffffff, 0)
-  //     data = bmp.writeBmp(framebuffer)
-  //     fs.writeFileSync(outname, data)
-  //     console.log "Wrote bmp: #{outname}"
-
 }
 
 function die(error) {
@@ -148,7 +161,6 @@ function loadBmp(filename, options) {
     isMonospace: options.monospace,
     generator: unicodes.fromRanges(options.map)
   });
-  console.log(`Using cell dimensions ${font.gridCellWidth} x ${font.gridCellHeight}`);
   return font;
 }
 
