@@ -17,6 +17,12 @@ const PSF_FLAG_HAS_UNICODE_TABLE = 0x01;
 const PSF_UNICODE_SEPARATOR = 0xff;
 const PSF_UNICODE_STARTSEQ = 0xfe;
 
+const PSF1_MAGIC = 0x3604;
+const PSF1_MODE512 = 0x01;
+const PSF1_MODEHASTAB = 0x02;
+const PSF1_UNICODE_SEPARATOR = 0xffff;
+const PSF1_UNICODE_STARTSEQ = 0xfffe;
+
 function write(font, options = { withMap: false }) {
   const chars = font.charsDefined();
   if (chars.length != 256 && chars.length != 512) {
@@ -65,6 +71,7 @@ function write(font, options = { withMap: false }) {
 function read(buffer) {
   const magic = buffer.readUInt32BE(0);
   if (magic != PSF_MAGIC) {
+    if (magic >> 16 == PSF1_MAGIC) return readVersion1(buffer);
     throw new Error("Not a PSF file");
   }
   const version = buffer.readUInt32LE(4);
@@ -81,28 +88,9 @@ function read(buffer) {
   if (rowsize > 2) throw new Error("I don't support such wide glyphs yet (max 16 pixels)");
 
   const font = new bitmap_font.BitmapFont(true);
-  let generator = unicodes.from(0);
-  if (flags & PSF_FLAG_HAS_UNICODE_TABLE > 0) {
-    let mapIndex = headerSize + chars * charsize;
-    const charmap = [];
-    for (let i = 0; i < chars; i++) {
-      let index = mapIndex;
-      while (true) {
-        const b = buffer.readUInt8(index);
-        if (b == PSF_UNICODE_SEPARATOR || b == PSF_UNICODE_STARTSEQ) break;
-        index += 1;
-      }
-      const ch = buffer.slice(mapIndex, index).toString("UTF-8").charCodeAt(0);
-      while (true) {
-        const b = buffer.readUInt8(index);
-        if (b == PSF_UNICODE_SEPARATOR) break;
-        index += 1;
-      }
-      mapIndex = index + 1;
-      charmap.push(ch);
-    }
-    generator = unicodes.fromArray(charmap);
-  }
+  const generator = (flags & PSF_FLAG_HAS_UNICODE_TABLE > 0) ?
+    readUnicodeTable(buffer, headerSize + chars * charsize, chars) :
+    unicodes.from(0);
 
   for (let i = 0; i < chars; i++) {
     const buf = buffer.slice(headerSize + i * charsize, headerSize + (i + 1) * charsize);
@@ -114,6 +102,69 @@ function read(buffer) {
   }
 
   return font;
+}
+
+function readVersion1(buffer) {
+  const mode = buffer[2];
+  const charsize = buffer[3];
+  const chars = (mode & PSF1_MODE512 > 0) ? 512 : 256;
+  const generator = (mode & PSF1_MODEHASTAB > 0) ?
+    readUnicodeTable1(buffer, 4 + chars * charsize, chars) :
+    unicodes.from(0);
+
+  const font = new bitmap_font.BitmapFont(true);
+  for (let i = 0; i < chars; i++) {
+    const buf = buffer.slice(4 + i * charsize, 4 + (i + 1) * charsize);
+    const rows = [];
+    for (let y = 0; y < charsize; y++) {
+      rows.push(buf[y]);
+    }
+    font.unpackRows(generator(), rows, 8, charsize, bitmap_font.BE);
+  }
+
+  return font;
+}
+
+function readUnicodeTable(buffer, offset, charCount) {
+  const charmap = [];
+  for (let i = 0; i < charCount; i++) {
+    let index = offset;
+    while (true) {
+      const b = buffer.readUInt8(index);
+      if (b == PSF_UNICODE_SEPARATOR || b == PSF_UNICODE_STARTSEQ) break;
+      index += 1;
+    }
+    const ch = buffer.slice(offset, index).toString("UTF-8").charCodeAt(0);
+    while (true) {
+      const b = buffer.readUInt8(index);
+      if (b == PSF_UNICODE_SEPARATOR) break;
+      index += 1;
+    }
+    offset = index + 1;
+    charmap.push(ch);
+  }
+  return unicodes.fromArray(charmap);
+}
+
+function readUnicodeTable1(buffer, offset, charCount) {
+  const charmap = [];
+  for (let i = 0; i < charCount; i++) {
+    let index = offset;
+    while (true) {
+      const b = buffer.readUInt16LE(index);
+      if (b == PSF1_UNICODE_SEPARATOR || b == PSF1_UNICODE_STARTSEQ) break;
+      index += 2;
+    }
+    const ch = buffer.readUInt16LE(index);
+    while (true) {
+      const b = buffer.readUInt16LE(index);
+      if (b == PSF1_UNICODE_SEPARATOR) break;
+      index += 2;
+    }
+    offest = index + 2;
+    charmap.push(ch);
+  }
+  return unicodes.fromArray(charmap);
 }
 
 function utf8(n) {
