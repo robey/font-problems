@@ -9,15 +9,17 @@
   "main": "lib/",
   "dependencies": {
     "antsy": "*",
-    "lodash": "*",
     "minimist": "*",
-    "source-map-support": "*",
+    "source-map-support": "^0.5.3",
     "sprintf": "*"
   },
   "devDependencies": {
-    "babel": "*",
-    "mocha": "*",
-    "should": "*"
+    "@types/mocha": "^2.2.48",
+    "@types/node": "^9.4.6",
+    "@types/should": "^13.0.0",
+    "mocha": "^5.0.1",
+    "should": "^13.2.1",
+    "typescript": "^2.7.2"
   },
   "files": [
     "lib",
@@ -26,10 +28,10 @@
     "*.sh"
   ],
   "scripts": {
+    "build": "tsc",
     "clean": "rm -rf lib",
     "distclean": "npm run clean && rm -rf node_modules",
-    "prepublish": "babel --source-maps --out-dir lib src && babel --source-maps --out-dir test/lib test/src",
-    "test": "mocha -R spec --colors test/lib"
+    "test": "npm run build && mocha -R spec --colors --recursive lib/test"
   },
   "author": "Robey Pointer <robeypointer@gmail.com>",
   "license": "Apache-2"
