@@ -1,32 +1,6 @@
 import { range } from "./arrays";
 import { Framebuffer } from "./framebuffer";
 
-// convert a framebuffer to/from a grid of on/off data.
-
-export function framebufferToGrid(fb: Framebuffer): number[][] {
-  const rows = new Array<number[]>(fb.height);
-  for (let y = 0; y < fb.height; y++) {
-    rows[y] = new Array<number>(fb.width);
-    for (let x = 0; x < fb.width; x++) {
-      rows[y][x] = fb.isOn(x, y) ? 1 : 0;
-    }
-  }
-  return rows;
-}
-
-// grab a box out of a 2D grid.
-export function cutGrid(data: number[][], x1: number, y1: number, x2: number, y2: number): number[][] {
-  const rv: number[][] = [];
-  for (let y = y1; y < y2; y++) {
-    rv.push(data[y].slice(x1, x2));
-  }
-  return rv;
-}
-
-
-
-
-
 /*
  * detect cell boundaries by finding rows & columns that are mostly empty.
  *
@@ -36,18 +10,14 @@ export function cutGrid(data: number[][], x1: number, y1: number, x2: number, y2
  * being brighter than the rest, then the cells are probably 8 pixels tall,
  * and the bottom line is the space between glyphs.
  */
-export function sniffBoundaries(grid: number[][]): { width: number, height: number } {
-  const width = grid[0].length;
-  const height = grid.length;
-  const vgrid = range(0, width).map(x => range(0, height).map(y => grid[y][x]));
-
+export function sniffBoundaries(image: Framebuffer): { width: number, height: number } {
   function average(list: number[]): number {
     return list.reduce((a, b) => a + b) / list.length;
   }
 
   // convert each row & column into a number representing the "average brightness".
-  const rows = grid.map(average);
-  const columns = vgrid.map(average);
+  const rows = range(0, image.height).map(y => average(range(0, image.width).map(x => image.getPixelAsGray(x, y))));
+  const columns = range(0, image.width).map(x => average(range(0, image.height).map(y => image.getPixelAsGray(x, y))));
 
   // average the "average brightness" values for every line along an
   // interval, with a small penalty to larger intervals.

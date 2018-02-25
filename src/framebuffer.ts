@@ -18,6 +18,11 @@ export class Framebuffer {
     return `Framebuffer(width=${this.width}, height=${this.height}, depth=${this.colorDepth})`;
   }
 
+  // fill from an array of pixel values.
+  fillData(data: number[]) {
+    this.pixels.set(data, 0);
+  }
+
   setPixel(x: number, y: number, color: number) {
     this.pixels[y * this.width + x] = color;
   }
@@ -108,5 +113,20 @@ export class Framebuffer {
         if (py < this.height - 1) workQueue.push(offset + this.width);
       }
     }
+  }
+
+  // create a new Framebuffer out of the box from (x1, y1) inclusive to
+  // (x2, y2) exclusive. my hope is that because these arrays are views,
+  // the set/slice call turns into a memcpy. (it probably doesn't.)
+  crop(x1: number, y1: number, x2: number, y2: number): Framebuffer {
+    const fb = new Framebuffer(x2 - x1, y2 - y1, this.colorDepth);
+    let offset = y1 * this.width + x1;
+    let targetOffset = 0;
+    for (let y = y1; y < y2; y++) {
+      fb.pixels.set(this.pixels.slice(offset, offset + fb.width), targetOffset);
+      offset += this.width;
+      targetOffset += fb.width;
+    }
+    return fb;
   }
 }

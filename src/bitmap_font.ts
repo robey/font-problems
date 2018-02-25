@@ -1,4 +1,7 @@
 import { arrayGrouped, range } from "./arrays";
+import { Framebuffer } from "./framebuffer";
+import { sniffBoundaries } from "./tools";
+import { unicodeFromRanges } from "./unicodes";
 
 /*
  * representation of a bitmap font.
@@ -36,18 +39,18 @@ export class BitmapFont {
   }
 
   /*
-   * given a 2D array (y, x) of on/off bits, add this glyph to the font.
+   * given a framebuffer of a glyph, add it to the font.
    */
-  add(char: number, data: number[][]) {
-    if (this.cellHeight == 0) this.cellHeight = data.length;
+  add(char: number, image: Framebuffer) {
+    if (this.cellHeight == 0) this.cellHeight = image.height;
 
     // determine the true width of the cell.
-    let width = data[0].length;
+    let width = image.width;
     if (!this.isMonospace) {
-      while (width > 0 && range(0, this.cellHeight).every(y => data[y][width - 1] == 0)) width--;
+      while (width > 0 && range(0, this.cellHeight).every(y => image.isOn(width - 1, y))) width--;
 
       // what about "space"? for a proportional font, use 1/2 the total width.
-      if (width == 0) width = Math.round(data[0].length / 2);
+      if (width == 0) width = Math.round(image.width / 2);
     }
 
     const size = this.cellHeight * width;
@@ -55,7 +58,7 @@ export class BitmapFont {
     let offset = 0;
     for (let y = 0; y < this.cellHeight; y++) {
       for (let x = 0; x < width; x++) {
-        if (data[y][x] != 0) {
+        if (!image.isOn(x, y)) {
           glyph[Math.floor(offset / 8)] |= (1 << (offset % 8));
         }
         offset++;
@@ -91,7 +94,7 @@ export class BitmapFont {
    * make a 2D grid (y, x) of the entire font, fitting as many glyphs into
    * each horizontal "line" as possible.
    */
-  dumpIntoGrid(width: number): number[][] {
+  __dumpIntoGrid(width: number): number[][] {
     let rows: number[][] = [];
     const charsPerRow = Math.floor(width / this.maxCellWidth());
     arrayGrouped(this.order, charsPerRow).forEach(chars => {
@@ -104,16 +107,56 @@ export class BitmapFont {
     });
     return rows;
   }
+
+  /*
+   * load a bitmap font from a framebuffer.
+   *
+   * the font must be in a regular grid. (for proportional fonts, align the
+   * left edges and leave the extra space on the right.) the grid dimensions
+   * can be determined heuristically if they aren't provided.
+   *
+   * the unicode code-point generator should be some iterable (usually
+   * provided by `unicodeFromRanges`) that provides the sequence of code
+   * points (as numbers) to assign to each glyph in order. the default
+   * generator starts from code-point zero.
+   */
+  static importFromImage(image: Framebuffer, options: ImportOptions = {}) {
+    if (!(options.cellWidth && options.cellHeight)) {
+      const { width, height } = sniffBoundaries(image);
+      options.cellWidth = width;
+      options.cellHeight = height;
+    }
+    if (options.isMonospace === undefined) options.isMonospace = true;
+    if (!options.codePoints) options.codePoints = unicodeFromRanges("0-");
+
+    const charRows = image.height / options.cellHeight;
+    const charColumns = image.width / options.cellWidth;
+    const font = new BitmapFont(options.isMonospace);
+
+    const unicode = options.codePoints[Symbol.iterator]();
+    for (let y = 0; y < charRows; y++) {
+      for (let x = 0; x < charColumns; x++) {
+        const px = x * options.cellWidth, py = y * options.cellHeight;
+        const glyph = image.crop(px, py, px + options.cellWidth, py + options.cellHeight);
+        font.add(unicode.next().value, glyph);
+      }
+    }
+    return font;
+  }
 }
 
+export interface ImportOptions {
+  // width of each cell in the grid (default: guess)
+  cellWidth?: number;
 
-// grab a box out of a 2D grid.
-export function cutGrid(data: number[][], x1: number, y1: number, x2: number, y2: number): number[][] {
-  const rv: number[][] = [];
-  for (let y = y1; y < y2; y++) {
-    rv.push(data[y].slice(x1, x2));
-  }
-  return rv;
+  // height of each cell in the grid (default: guess)
+  cellHeight?: number;
+
+  // if false, extra padding on the right of each glyph will be removed (default: true)
+  isMonospace?: boolean;
+
+  // assign unicode code points to each glyph in order
+  codePoints?: Iterable<number>;
 }
 
 
