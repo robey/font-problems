@@ -5,10 +5,6 @@ const BMP_HEADER = [ 0x42, 0x4d ];
 const HEADER_SIZE = 14;
 
 // read a BMP file into a framebuffer
-export function readBmpFromFile(filename: string): Framebuffer {
-  return readBmp(fs.readFileSync(filename));
-}
-
 export function readBmp(data: Buffer): Framebuffer {
   if (data[0] != BMP_HEADER[0] || data[1] != BMP_HEADER[1]) {
     throw new Error(`Not a BMP file`);
