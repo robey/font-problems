@@ -25,13 +25,16 @@ describe("BitmapFont", () => {
     font.cellHeight.should.eql(6);
     font.cellWidth(32).should.eql(6);
     font.getRaw(32).should.eql("0108008400");
-    font.get(32).should.eql([
-      [ 1, 0, 0, 0, 0, 0 ],
-      [ 0, 0, 0, 0, 0, 1 ],
-      [ 0, 0, 0, 0, 0, 0 ],
-      [ 0, 0, 0, 0, 0, 0 ],
-      [ 0, 0, 1, 0, 0, 0 ],
-      [ 0, 1, 0, 0, 0, 0 ],
+
+    const fb = new Framebuffer(6, 6, 24);
+    font.draw(32, fb, 0, 0, 1, 0);
+    Array.from(fb.pixels).should.eql([
+      1, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 1,
+      0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0,
+      0, 0, 1, 0, 0, 0,
+      0, 1, 0, 0, 0, 0,
     ]);
   });
 
@@ -40,13 +43,16 @@ describe("BitmapFont", () => {
     font.add(32, IMAGE.crop(0, 0, 5, 6));
     font.cellHeight.should.eql(6);
     font.cellWidth(32).should.eql(3);
-    font.get(32).should.eql([
-      [ 1, 0, 0 ],
-      [ 0, 0, 0 ],
-      [ 0, 0, 0 ],
-      [ 0, 0, 0 ],
-      [ 0, 0, 1 ],
-      [ 0, 1, 0 ],
+
+    const fb = new Framebuffer(3, 6, 24);
+    font.draw(32, fb, 0, 0, 1, 0);
+    Array.from(fb.pixels).should.eql([
+      1, 0, 0,
+      0, 0, 0,
+      0, 0, 0,
+      0, 0, 0,
+      0, 0, 1,
+      0, 1, 0,
     ]);
   });
 
@@ -55,10 +61,13 @@ describe("BitmapFont", () => {
     font.add(32, IMAGE.crop(0, 0, 3, 3));
     font.cellHeight.should.eql(3);
     font.cellWidth(32).should.eql(3);
-    font.get(32).should.eql([
-      [ 1, 0, 0 ],
-      [ 0, 0, 0 ],
-      [ 0, 0, 0 ],
+
+    const fb = new Framebuffer(3, 3, 24);
+    font.draw(32, fb, 0, 0, 1, 0);
+    Array.from(fb.pixels).should.eql([
+      1, 0, 0,
+      0, 0, 0,
+      0, 0, 0,
     ]);
   });
 
@@ -70,7 +79,10 @@ describe("BitmapFont", () => {
     font.cellWidth("M".codePointAt(0) || 0).should.eql(5);
     font.charsDefined().length.should.eql(128);
     font.cellWidth("!".codePointAt(0) || 0).should.eql(1);
-    // Array.prototype.slice.call(font.chars[33]).map(x => x > 0 ? "+" : "-").join("").should.eql("+++++-+-");
+
+    const fb2 = new Framebuffer(1, 8, 24);
+    font.draw("!".codePointAt(0) || 0, fb2, 0, 0, 1, 0);
+    Array.from(fb2.pixels).should.eql([ 1, 1, 1, 1, 1, 0, 1, 0 ]);
   });
 
 });

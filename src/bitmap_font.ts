@@ -71,42 +71,39 @@ export class BitmapFont {
   }
 
   /*
-   * dump glyph data back into a 2D array (y, x) of on/off bits.
+   * draw glyph data into a framebuffer.
    */
-  get(char: number): number[][] {
+  draw(char: number, fb: Framebuffer, x: number, y: number, fgColor: number, bgColor: number) {
     const glyph = this.chars.get(char);
     const width = this.widths.get(char);
     if (!glyph || !width) throw new Error("No such char");
 
-    const data = new Array<number[]>(this.cellHeight);
     let offset = 0;
-    for (let y = 0; y < this.cellHeight; y++) {
-      data[y] = new Array<number>(width);
-      for (let x = 0; x < width; x++) {
-        data[y][x] = (glyph[Math.floor(offset / 8)] & (1 << (offset % 8))) != 0 ? 1 : 0;
+    for (let py = 0; py < this.cellHeight; py++) {
+      for (let px = 0; px < width; px++) {
+        fb.setPixel(x + px, y + py, (glyph[Math.floor(offset / 8)] & (1 << (offset % 8))) != 0 ? fgColor : bgColor);
         offset++;
       }
     }
-    return data;
   }
 
   /*
    * make a 2D grid (y, x) of the entire font, fitting as many glyphs into
    * each horizontal "line" as possible.
    */
-  __dumpIntoGrid(width: number): number[][] {
-    let rows: number[][] = [];
-    const charsPerRow = Math.floor(width / this.maxCellWidth());
-    arrayGrouped(this.order, charsPerRow).forEach(chars => {
-      const charRow: number[][] = new Array(this.cellHeight);
-      chars.forEach(char => {
-        const data = this.get(char);
-        for (let i = 0; i < charRow.length; i++) charRow[i] = charRow[i].concat(data[i]);
-      });
-      rows = rows.concat(charRow);
-    });
-    return rows;
-  }
+  // __dumpIntoGrid(width: number): number[][] {
+  //   let rows: number[][] = [];
+  //   const charsPerRow = Math.floor(width / this.maxCellWidth());
+  //   arrayGrouped(this.order, charsPerRow).forEach(chars => {
+  //     const charRow: number[][] = new Array(this.cellHeight);
+  //     chars.forEach(char => {
+  //       const data = this.get(char);
+  //       for (let i = 0; i < charRow.length; i++) charRow[i] = charRow[i].concat(data[i]);
+  //     });
+  //     rows = rows.concat(charRow);
+  //   });
+  //   return rows;
+  // }
 
   /*
    * load a bitmap font from a framebuffer.
