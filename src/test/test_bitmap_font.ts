@@ -1,7 +1,8 @@
 import * as fs from "fs";
-import { BitDirection, BitmapFont, Glyph } from "../bitmap_font";
+import { BitmapFont, sniffBoundaries } from "../bitmap_font";
 import { readBmp } from "../bmp";
 import { Framebuffer } from "../framebuffer";
+import { BitDirection, Glyph } from "../glyph";
 
 import "should";
 import "source-map-support/register";
@@ -75,6 +76,16 @@ describe("BitmapFont", () => {
       0, 0, 0,
       0, 0, 0,
     ]);
+  });
+
+  it("sniffBoundaries", () => {
+    function loadBmp(filename: string): Framebuffer {
+      return readBmp(fs.readFileSync(`src/test/data/${filename}`));
+    }
+
+    sniffBoundaries(loadBmp("tom-thumb-256.bmp")).should.eql({ width: 4, height: 6 });
+    sniffBoundaries(loadBmp("lolathin.bmp")).should.eql({ width: 6, height: 8 });
+    sniffBoundaries(loadBmp("lola12.bmp")).should.eql({ width: 6, height: 12 });
   });
 
   it("loads from a framebuffer", () => {
