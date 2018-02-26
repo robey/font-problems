@@ -73,7 +73,7 @@ export class BitmapFont {
   /*
    * draw glyph data into a framebuffer.
    */
-  draw(char: number, fb: Framebuffer, x: number, y: number, fgColor: number, bgColor: number) {
+  draw(char: number, fb: Framebuffer, fgColor: number, bgColor: number) {
     const glyph = this.chars.get(char);
     const width = this.widths.get(char);
     if (!glyph || !width) throw new Error("No such char");
@@ -81,7 +81,7 @@ export class BitmapFont {
     let offset = 0;
     for (let py = 0; py < this.cellHeight; py++) {
       for (let px = 0; px < width; px++) {
-        fb.setPixel(x + px, y + py, (glyph[Math.floor(offset / 8)] & (1 << (offset % 8))) != 0 ? fgColor : bgColor);
+        fb.setPixel(px, py, (glyph[Math.floor(offset / 8)] & (1 << (offset % 8))) != 0 ? fgColor : bgColor);
         offset++;
       }
     }
@@ -134,7 +134,7 @@ export class BitmapFont {
     for (let y = 0; y < charRows; y++) {
       for (let x = 0; x < charColumns; x++) {
         const px = x * options.cellWidth, py = y * options.cellHeight;
-        const glyph = image.crop(px, py, px + options.cellWidth, py + options.cellHeight);
+        const glyph = image.view(px, py, px + options.cellWidth, py + options.cellHeight);
         font.add(unicode.next().value, glyph);
       }
     }
