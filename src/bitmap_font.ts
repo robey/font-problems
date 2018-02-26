@@ -10,32 +10,20 @@ import { unicodeFromRanges } from "./unicodes";
  * characters are indexed by unicode index (int), for example "A" is 65.
  */
 export class BitmapFont {
-  private chars = new Map<number, Buffer>();
-  private widths = new Map<number, number>();
-  private order: number[] = [];
-  public cellHeight = 0;
+  glyphs = new Map<number, Glyph>();
+  order: number[] = [];
+  cellHeight = 0;
 
   constructor(public isMonospace: boolean = false) {
     // pass
   }
 
-  charsDefined() {
-    return this.order;
-  }
-
-  getRaw(char: number): string {
-    const buffer = this.chars.get(char);
-    if (!buffer) return "";
-    return range(0, buffer.length).map(i => ("0" + buffer[i].toString(16)).slice(-2)).join("");
-  }
-
-  cellWidth(char: number): number {
-    return this.widths.get(char) || 0;
-  }
-
   maxCellWidth(): number {
-    if (this.isMonospace) return this.widths.get(this.order[0]) || 0;
-    return Math.max(...this.widths.values());
+    if (this.isMonospace) {
+      const glyph = this.glyphs.get(this.order[0]);
+      return glyph ? glyph.width : 0;
+    }
+    return Math.max(...Array.from(this.glyphs.values()).map(g => g.width));
   }
 
   /*
@@ -54,37 +42,15 @@ export class BitmapFont {
     }
 
     const size = this.cellHeight * width;
-    const glyph = Buffer.alloc(Math.ceil(size / 8), 0);
-    let offset = 0;
+    const glyph = new Glyph(new Uint8Array(Math.ceil(size / 8)), width, this.cellHeight);
     for (let y = 0; y < this.cellHeight; y++) {
       for (let x = 0; x < width; x++) {
-        if (!image.isOn(x, y)) {
-          glyph[Math.floor(offset / 8)] |= (1 << (offset % 8));
-        }
-        offset++;
+        if (!image.isOn(x, y)) glyph.setPixel(x, y);
       }
     }
 
-    this.widths.set(char, width);
-    this.chars.set(char, glyph);
+    this.glyphs.set(char, glyph);
     this.order.push(char);
-  }
-
-  /*
-   * draw glyph data into a framebuffer.
-   */
-  draw(char: number, fb: Framebuffer, fgColor: number, bgColor: number) {
-    const glyph = this.chars.get(char);
-    const width = this.widths.get(char);
-    if (!glyph || !width) throw new Error("No such char");
-
-    let offset = 0;
-    for (let py = 0; py < this.cellHeight; py++) {
-      for (let px = 0; px < width; px++) {
-        fb.setPixel(px, py, (glyph[Math.floor(offset / 8)] & (1 << (offset % 8))) != 0 ? fgColor : bgColor);
-        offset++;
-      }
-    }
   }
 
   /*
@@ -142,6 +108,7 @@ export class BitmapFont {
   }
 }
 
+
 export interface ImportOptions {
   // width of each cell in the grid (default: guess)
   cellWidth?: number;
@@ -157,42 +124,80 @@ export interface ImportOptions {
 }
 
 
+export class Glyph {
+  constructor(public data: Uint8Array, public width: number, public height: number) {
+    // pass
+  }
+
+  get rawHex(): string {
+    return range(0, this.data.length).map(i => ("0" + this.data[i].toString(16)).slice(-2)).join("");
+  }
+
+  getPixel(x: number, y: number): boolean {
+    const offset = y * this.width + x;
+    return (this.data[Math.floor(offset / 8)] & (1 << (offset % 8))) != 0;
+  }
+
+  setPixel(x: number, y: number) {
+    const offset = y * this.width + x;
+    this.data[Math.floor(offset / 8)] |= (1 << (offset % 8));
+  }
+
+  draw(fb: Framebuffer, fgColor: number, bgColor: number) {
+    for (let py = 0; py < this.height; py++) {
+      for (let px = 0; px < this.width; px++) {
+        fb.setPixel(px, py, this.getPixel(px, py) ? fgColor : bgColor);
+      }
+    }
+  }
+
+  /*
+   * pack into an array of ints, each int as one row.
+   * LE = smallest bit on the left.
+   * BE = smallest bit on the right.
+   */
+  packIntoRows(direction: BitDirection = BitDirection.LE): number[] {
+    const rv = [];
+    for (let y = 0; y < this.height; y++) {
+      let line = 0;
+      for (let x = 0; x < this.width; x++) {
+        const px = direction == BitDirection.LE ? this.width - x - 1 : x;
+        line = (line << 1) | (this.getPixel(px, y) ? 1 : 0);
+      }
+      if (direction == BitDirection.BE && this.width % 8 != 0) {
+        // pad on the right so the left pixel aligns with a byte boundary!
+        line <<= (8 - this.width % 8);
+      }
+      rv.push(line);
+    }
+    return rv;
+  }
+
+  /*
+   * pack into an array of ints, each int as one column.
+   * LE = smallest bit on top.
+   * BE = smallest bit on bottom.
+   */
+  packIntoColumns(direction: BitDirection = BitDirection.LE): number[] {
+    const rv = [];
+    for (let x = 0; x < this.width; x++) {
+      let line = 0;
+      for (let y = 0; y < this.height; y++) {
+        const py = direction == BitDirection.LE ? this.height - y - 1 : y;
+        line = (line << 1) | (this.getPixel(x, py) ? 1 : 0);
+      }
+      if (direction == BitDirection.BE && this.height % 8 != 0) {
+        // pad on the bottom so the top pixel aligns with a byte boundary!
+        line <<= (8 - this.height % 8);
+      }
+      rv.push(line);
+    }
+    return rv;
+  }
 
 
-//
-// const cell = new Uint8Array(cellWidth * height);
-// for (let py = 0; py < height; py++) {
-//   for (let px = 0; px < cellWidth; px++) {
-//     cell[py * cellWidth + px] = framebuffer.isOn(xOffset + px, yOffset + py) ? 0 : 1;
-//   }
-// }
-//
-// this.add(char, cell, height);
-// return cell;
-// }
+}
 
-//
-// // pack each glyph into an array of ints, each int as one row.
-// // LE = smallest bit on the left
-// // BE = smallest bit on the right
-// packIntoRows(direction = LE) {
-//   const rv = {};
-//   for (let char in this.chars) {
-//     const cell = this.chars[char];
-//     const cellWidth = cell.length / this.cellHeight;
-//     rv[char] = [];
-//     for (let y = 0; y < this.cellHeight; y++) {
-//       let line = 0;
-//       for (let x = 0; x < cellWidth; x++) {
-//         const px = direction == LE ? cellWidth - x - 1 : x;
-//         line = (line << 1) | cell[y * cellWidth + px];
-//       }
-//       if (direction == BE && cellWidth % 8 != 0) {
-//         // pad on the right so the left pixel aligns with a byte boundary!
-//         line <<= (8 - cellWidth % 8);
-//       }
-//       rv[char].push(line);
-//     }
-//   }
-//   return rv;
-// }
+export enum BitDirection {
+  LE, BE
+}

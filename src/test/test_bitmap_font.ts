@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { BitmapFont } from "../bitmap_font";
+import { BitDirection, BitmapFont } from "../bitmap_font";
 import { readBmp } from "../bmp";
 import { Framebuffer } from "../framebuffer";
 
@@ -23,11 +23,13 @@ describe("BitmapFont", () => {
     const font = new BitmapFont();
     font.add(32, IMAGE.view(0, 0, 6, 6));
     font.cellHeight.should.eql(6);
-    font.cellWidth(32).should.eql(6);
-    font.getRaw(32).should.eql("0108008400");
+    const glyph = font.glyphs.get(32);
+    if (!glyph) throw new Error("uhhhhh");
+    glyph.width.should.eql(6);
+    glyph.rawHex.should.eql("0108008400");
 
     const fb = new Framebuffer(6, 6, 24);
-    font.draw(32, fb, 1, 0);
+    glyph.draw(fb, 1, 0);
     Array.from(fb.pixels).should.eql([
       1, 0, 0, 0, 0, 0,
       0, 0, 0, 0, 0, 1,
@@ -42,10 +44,12 @@ describe("BitmapFont", () => {
     const font = new BitmapFont();
     font.add(32, IMAGE.view(0, 0, 5, 6));
     font.cellHeight.should.eql(6);
-    font.cellWidth(32).should.eql(3);
+    const glyph = font.glyphs.get(32);
+    if (!glyph) throw new Error("uhhhhh");
+    glyph.width.should.eql(3);
 
     const fb = new Framebuffer(3, 6, 24);
-    font.draw(32, fb, 1, 0);
+    glyph.draw(fb, 1, 0);
     Array.from(fb.pixels).should.eql([
       1, 0, 0,
       0, 0, 0,
@@ -60,10 +64,12 @@ describe("BitmapFont", () => {
     const font = new BitmapFont(true);
     font.add(32, IMAGE.view(0, 0, 3, 3));
     font.cellHeight.should.eql(3);
-    font.cellWidth(32).should.eql(3);
+    const glyph = font.glyphs.get(32);
+    if (!glyph) throw new Error("uhhhhh");
+    glyph.width.should.eql(3);
 
     const fb = new Framebuffer(3, 3, 24);
-    font.draw(32, fb, 1, 0);
+    glyph.draw(fb, 1, 0);
     Array.from(fb.pixels).should.eql([
       1, 0, 0,
       0, 0, 0,
@@ -76,13 +82,43 @@ describe("BitmapFont", () => {
     const font = BitmapFont.importFromImage(fb, { isMonospace: false });
     font.isMonospace.should.eql(false);
     font.cellHeight.should.eql(8);
-    font.cellWidth("M".codePointAt(0) || 0).should.eql(5);
-    font.charsDefined().length.should.eql(128);
-    font.cellWidth("!".codePointAt(0) || 0).should.eql(1);
+
+    const em = font.glyphs.get("M".codePointAt(0) || 0);
+    const bang = font.glyphs.get("!".codePointAt(0) || 0);
+    if (!em || !bang) throw new Error("uhhhhh");
+
+    em.width.should.eql(5);
+    font.order.length.should.eql(128);
+    bang.width.should.eql(1);
 
     const fb2 = new Framebuffer(1, 8, 24);
-    font.draw("!".codePointAt(0) || 0, fb2, 1, 0);
+    bang.draw(fb2, 1, 0);
     Array.from(fb2.pixels).should.eql([ 1, 1, 1, 1, 1, 0, 1, 0 ]);
   });
 
+  it("packs into rows", () => {
+    const fb = readBmp(fs.readFileSync("src/test/data/tom-thumb-256.bmp"));
+    const font = BitmapFont.importFromImage(fb);
+    const ee = font.glyphs.get(0x45);
+    const jay = font.glyphs.get(0x4a);
+    if (!ee || !jay) throw new Error("uhhhhh");
+
+    ee.packIntoRows(BitDirection.LE).should.eql([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ]);
+    jay.packIntoRows(BitDirection.LE).should.eql([ 0x4, 0x4, 0x4, 0x5, 0x2, 0 ]);
+    ee.packIntoRows(BitDirection.BE).should.eql([ 0xe0, 0x80, 0xe0, 0x80, 0xe0, 0 ]);
+    jay.packIntoRows(BitDirection.BE).should.eql([ 0x20, 0x20, 0x20, 0xa0, 0x40, 0 ]);
+  });
+
+  it("packs into columns", () => {
+    const fb = readBmp(fs.readFileSync("src/test/data/tom-thumb-256.bmp"));
+    const font = BitmapFont.importFromImage(fb);
+    const ee = font.glyphs.get(0x45);
+    const jay = font.glyphs.get(0x4a);
+    if (!ee || !jay) throw new Error("uhhhhh");
+
+    ee.packIntoColumns(BitDirection.LE).should.eql([ 0x1f, 0x15, 0x15, 0 ]);
+    jay.packIntoColumns(BitDirection.LE).should.eql([ 0x08, 0x10, 0x0f, 0 ]);
+    ee.packIntoColumns(BitDirection.BE).should.eql([ 0xf8, 0xa8, 0xa8, 0 ]);
+    jay.packIntoColumns(BitDirection.BE).should.eql([ 0x10, 0x08, 0xf0, 0 ]);
+  });
 });
