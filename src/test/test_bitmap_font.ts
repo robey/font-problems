@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { BitDirection, BitmapFont } from "../bitmap_font";
+import { BitDirection, BitmapFont, Glyph } from "../bitmap_font";
 import { readBmp } from "../bmp";
 import { Framebuffer } from "../framebuffer";
 
@@ -21,7 +21,7 @@ describe("BitmapFont", () => {
 
   it("reads a normal cell", () => {
     const font = new BitmapFont();
-    font.add(32, IMAGE.view(0, 0, 6, 6));
+    font.add(32, Glyph.fromFramebuffer(IMAGE.view(0, 0, 6, 6), true));
     font.cellHeight.should.eql(6);
     const glyph = font.glyphs.get(32);
     if (!glyph) throw new Error("uhhhhh");
@@ -42,7 +42,7 @@ describe("BitmapFont", () => {
 
   it("trims a proportional font", () => {
     const font = new BitmapFont();
-    font.add(32, IMAGE.view(0, 0, 5, 6));
+    font.add(32, Glyph.fromFramebuffer(IMAGE.view(0, 0, 5, 6), false));
     font.cellHeight.should.eql(6);
     const glyph = font.glyphs.get(32);
     if (!glyph) throw new Error("uhhhhh");
@@ -62,7 +62,7 @@ describe("BitmapFont", () => {
 
   it("doesn't trim a monospace font", () => {
     const font = new BitmapFont(true);
-    font.add(32, IMAGE.view(0, 0, 3, 3));
+    font.add(32, Glyph.fromFramebuffer(IMAGE.view(0, 0, 3, 3), true));
     font.cellHeight.should.eql(3);
     const glyph = font.glyphs.get(32);
     if (!glyph) throw new Error("uhhhhh");
@@ -120,5 +120,30 @@ describe("BitmapFont", () => {
     jay.packIntoColumns(BitDirection.LE).should.eql([ 0x08, 0x10, 0x0f, 0 ]);
     ee.packIntoColumns(BitDirection.BE).should.eql([ 0xf8, 0xa8, 0xa8, 0 ]);
     jay.packIntoColumns(BitDirection.BE).should.eql([ 0x10, 0x08, 0xf0, 0 ]);
+  });
+
+  it("addFromRows", () => {
+    const font = new BitmapFont(true);
+    font.add(0x45, Glyph.fromRows([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ], 4, BitDirection.LE));
+    font.add(0x4a, Glyph.fromRows([ 0x20, 0x20, 0x20, 0xa0, 0x40, 0 ], 4, BitDirection.BE));
+    const ee = font.glyphs.get(0x45);
+    const jay = font.glyphs.get(0x4a);
+    if (!ee || !jay) throw new Error("uhhhhh");
+
+    ee.rawHex.should.eql("171707");
+    jay.rawHex.should.eql("445402");
+  });
+
+  it("addFromColumns", () => {
+    const font = new BitmapFont(true);
+    font.add(0x45, Glyph.fromColumns([ 0x1f, 0x15, 0x15, 0 ], 6, BitDirection.LE));
+    font.add(0x4a, Glyph.fromColumns([ 0x10, 0x08, 0xf0, 0 ], 6, BitDirection.BE));
+
+    const ee = font.glyphs.get(0x45);
+    const jay = font.glyphs.get(0x4a);
+    if (!ee || !jay) throw new Error("uhhhhh");
+
+    ee.rawHex.should.eql("171707");
+    jay.rawHex.should.eql("445402");
   });
 });

@@ -26,32 +26,16 @@ export class BitmapFont {
     return Math.max(...Array.from(this.glyphs.values()).map(g => g.width));
   }
 
-  /*
-   * given a framebuffer of a glyph, add it to the font.
-   */
-  add(char: number, image: Framebuffer) {
-    if (this.cellHeight == 0) this.cellHeight = image.height;
-
-    // determine the true width of the cell.
-    let width = image.width;
-    if (!this.isMonospace) {
-      while (width > 0 && range(0, this.cellHeight).every(y => image.isOn(width - 1, y))) width--;
-
-      // what about "space"? for a proportional font, use 1/2 the total width.
-      if (width == 0) width = Math.round(image.width / 2);
-    }
-
-    const size = this.cellHeight * width;
-    const glyph = new Glyph(new Uint8Array(Math.ceil(size / 8)), width, this.cellHeight);
-    for (let y = 0; y < this.cellHeight; y++) {
-      for (let x = 0; x < width; x++) {
-        if (!image.isOn(x, y)) glyph.setPixel(x, y);
-      }
-    }
-
+  add(char: number, glyph: Glyph) {
+    if (this.cellHeight == 0) this.cellHeight = glyph.height;
     this.glyphs.set(char, glyph);
     this.order.push(char);
   }
+
+
+
+
+
 
   /*
    * make a 2D grid (y, x) of the entire font, fitting as many glyphs into
@@ -100,8 +84,8 @@ export class BitmapFont {
     for (let y = 0; y < charRows; y++) {
       for (let x = 0; x < charColumns; x++) {
         const px = x * options.cellWidth, py = y * options.cellHeight;
-        const glyph = image.view(px, py, px + options.cellWidth, py + options.cellHeight);
-        font.add(unicode.next().value, glyph);
+        const view = image.view(px, py, px + options.cellWidth, py + options.cellHeight);
+        font.add(unicode.next().value, Glyph.fromFramebuffer(view, options.isMonospace));
       }
     }
     return font;
@@ -195,7 +179,61 @@ export class Glyph {
     return rv;
   }
 
+  static fromFramebuffer(fb: Framebuffer, isMonospace: boolean): Glyph {
+    // determine the true width of the cell.
+    let width = fb.width;
+    if (!isMonospace) {
+      while (width > 0 && range(0, fb.height).every(y => fb.isOn(width - 1, y))) width--;
 
+      // what about "space"? for a proportional font, use 1/2 the total width.
+      if (width == 0) width = Math.round(fb.width / 2);
+    }
+
+    const size = fb.height * width;
+    const glyph = new Glyph(new Uint8Array(Math.ceil(size / 8)), width, fb.height);
+    for (let y = 0; y < fb.height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (!fb.isOn(x, y)) glyph.setPixel(x, y);
+      }
+    }
+    return glyph;
+  }
+
+  // the opposite of `packIntoRows`.
+  static fromRows(rows: number[], width: number, direction: BitDirection = BitDirection.LE): Glyph {
+    const size = rows.length * width;
+    const glyph = new Glyph(new Uint8Array(Math.ceil(size / 8)), width, rows.length);
+
+    rows.forEach((row, y) => {
+      if (direction == BitDirection.BE && width % 8 != 0) {
+        // remove padding from the right
+        row >>= (8 - width % 8);
+      }
+      for (let i = 0; i < width; i++) {
+        const px = direction == BitDirection.BE ? width - i - 1 : i;
+        if (((row >> i) & 1) != 0) glyph.setPixel(px, y);
+      }
+    });
+    return glyph;
+  }
+
+  // the opposite of `packIntoColumns`.
+  static fromColumns(columns: number[], height: number, direction: BitDirection = BitDirection.LE): Glyph {
+    const size = height * columns.length;
+    const glyph = new Glyph(new Uint8Array(Math.ceil(size / 8)), columns.length, height);
+
+    columns.forEach((col, x) => {
+      if (direction == BitDirection.BE && height % 8 != 0) {
+        // remove padding from the bottom
+        col >>= (8 - height % 8);
+      }
+      for (let i = 0; i < height; i++) {
+        const py = direction == BitDirection.BE ? height - i - 1 : i;
+        if (((col >> i) & 1) != 0) glyph.setPixel(x, py);
+      }
+    });
+    return glyph;
+  }
 }
 
 export enum BitDirection {
