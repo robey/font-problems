@@ -19,13 +19,13 @@ export interface ImportOptions {
 
 /*
  * representation of a bitmap font.
- * each glyph is a packed Buffer of (y, x) to 1 or 0 (on or off).
- * x, y are left to right, top to bottom.
- * characters are indexed by unicode index (int), for example "A" is 65.
+ *
+ * each `Glyph` is a packed bitfield of the on/off data, indexed by the order
+ * it was added. `codemap` maps each glyph to a set of unicode sequences.
  */
 export class BitmapFont {
-  glyphs = new Map<number, Glyph>();
-  order: number[] = [];
+  glyphs: Glyph[] = [];
+  codemap: string[][] = [];
   cellHeight = 0;
 
   constructor(public isMonospace: boolean = false) {
@@ -34,40 +34,54 @@ export class BitmapFont {
 
   maxCellWidth(): number {
     if (this.isMonospace) {
-      const glyph = this.glyphs.get(this.order[0]);
+      const glyph = this.glyphs[0];
       return glyph ? glyph.width : 0;
     }
     return Math.max(...Array.from(this.glyphs.values()).map(g => g.width));
   }
 
-  add(char: number, glyph: Glyph) {
+  add(glyph: Glyph, codes: string[]) {
     if (this.cellHeight == 0) this.cellHeight = glyph.height;
-    this.glyphs.set(char, glyph);
-    this.order.push(char);
+    this.glyphs.push(glyph);
+    this.codemap.push(codes);
   }
 
-
-
-
-
+  find(code: string): Glyph | undefined {
+    for (let i = 0; i < this.codemap.length; i++) {
+      if (this.codemap[i].includes(code)) return this.glyphs[i];
+    }
+    return undefined;
+  }
 
   /*
-   * make a 2D grid (y, x) of the entire font, fitting as many glyphs into
-   * each horizontal "line" as possible.
+   * scale the entire font by some whole number (2, 3, ...) by turning every
+   * pixel into an NxN square.
    */
-  // __dumpIntoGrid(width: number): number[][] {
-  //   let rows: number[][] = [];
-  //   const charsPerRow = Math.floor(width / this.maxCellWidth());
-  //   arrayGrouped(this.order, charsPerRow).forEach(chars => {
-  //     const charRow: number[][] = new Array(this.cellHeight);
-  //     chars.forEach(char => {
-  //       const data = this.get(char);
-  //       for (let i = 0; i < charRow.length; i++) charRow[i] = charRow[i].concat(data[i]);
-  //     });
-  //     rows = rows.concat(charRow);
-  //   });
-  //   return rows;
-  // }
+  scale(factor: number) {
+    this.glyphs = this.glyphs.map(g => g.scale(factor));
+    this.cellHeight *= factor;
+  }
+
+  /*
+   * make a 2D grid (y, x) of the entire font, with the specified number of
+   * glyphs per row.
+   */
+  dumpIntoFramebuffer(glyphsPerRow: number, fgColor: number, bgColor: number): Framebuffer {
+    const xStride = this.maxCellWidth(), yStride = this.cellHeight;
+    const width = xStride * glyphsPerRow, height = yStride * Math.ceil(this.glyphs.length / glyphsPerRow);
+    const fb = new Framebuffer(width, height, 24);
+
+    let x = 0, y = 0;
+    this.glyphs.forEach(glyph => {
+      glyph.draw(fb.view(x, y, x + xStride, y + yStride), fgColor, bgColor);
+      x += xStride;
+      if (x >= fb.width) {
+        x = 0;
+        y += yStride;
+      }
+    });
+    return fb;
+  }
 
   /*
    * load a bitmap font from a framebuffer.
@@ -99,7 +113,7 @@ export class BitmapFont {
       for (let x = 0; x < charColumns; x++) {
         const px = x * options.cellWidth, py = y * options.cellHeight;
         const view = image.view(px, py, px + options.cellWidth, py + options.cellHeight);
-        font.add(unicode.next().value, Glyph.fromFramebuffer(view, options.isMonospace));
+        font.add(Glyph.fromFramebuffer(view, options.isMonospace), [ String.fromCodePoint(unicode.next().value) ]);
       }
     }
     return font;

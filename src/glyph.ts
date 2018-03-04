@@ -5,6 +5,10 @@ export enum BitDirection {
   LE, BE
 }
 
+/*
+ * the pixel data for a glyph, stored as a bitfield in (y, x) order starting
+ * at the upper left.
+ */
 export class Glyph {
   constructor(public data: Uint8Array, public width: number, public height: number) {
     // pass
@@ -30,6 +34,23 @@ export class Glyph {
         fb.setPixel(px, py, this.getPixel(px, py) ? fgColor : bgColor);
       }
     }
+  }
+
+  // make a larger version of this glyph, with each pixel turned into an NxN square.
+  scale(factor: number): Glyph {
+    const rv = new Glyph(new Uint8Array(this.data.length * factor * factor), this.width * factor, this.height * factor);
+    for (let py = 0; py < this.height; py++) {
+      for (let px = 0; px < this.width; px++) {
+        if (this.getPixel(px, py)) {
+          for (let dx = 0; dx < factor; dx++) {
+            for (let dy = 0; dy < factor; dy++) {
+              rv.setPixel(px * factor + dx, py * factor + dy);
+            }
+          }
+        }
+      }
+    }
+    return rv;
   }
 
   /*

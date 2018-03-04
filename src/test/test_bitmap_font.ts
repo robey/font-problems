@@ -22,9 +22,9 @@ describe("BitmapFont", () => {
 
   it("reads a normal cell", () => {
     const font = new BitmapFont();
-    font.add(32, Glyph.fromFramebuffer(IMAGE.view(0, 0, 6, 6), true));
+    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 6, 6), true), [ "x" ]);
     font.cellHeight.should.eql(6);
-    const glyph = font.glyphs.get(32);
+    const glyph = font.glyphs[0];
     if (!glyph) throw new Error("uhhhhh");
     glyph.width.should.eql(6);
     glyph.rawHex.should.eql("0108008400");
@@ -43,9 +43,9 @@ describe("BitmapFont", () => {
 
   it("trims a proportional font", () => {
     const font = new BitmapFont();
-    font.add(32, Glyph.fromFramebuffer(IMAGE.view(0, 0, 5, 6), false));
+    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 5, 6), false), [ "x" ]);
     font.cellHeight.should.eql(6);
-    const glyph = font.glyphs.get(32);
+    const glyph = font.glyphs[0];
     if (!glyph) throw new Error("uhhhhh");
     glyph.width.should.eql(3);
 
@@ -63,9 +63,9 @@ describe("BitmapFont", () => {
 
   it("doesn't trim a monospace font", () => {
     const font = new BitmapFont(true);
-    font.add(32, Glyph.fromFramebuffer(IMAGE.view(0, 0, 3, 3), true));
+    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 3, 3), true), [ "x" ]);
     font.cellHeight.should.eql(3);
-    const glyph = font.glyphs.get(32);
+    const glyph = font.glyphs[0];
     if (!glyph) throw new Error("uhhhhh");
     glyph.width.should.eql(3);
 
@@ -94,12 +94,12 @@ describe("BitmapFont", () => {
     font.isMonospace.should.eql(false);
     font.cellHeight.should.eql(8);
 
-    const em = font.glyphs.get("M".codePointAt(0) || 0);
-    const bang = font.glyphs.get("!".codePointAt(0) || 0);
+    const em = font.glyphs["M".codePointAt(0) || 0];
+    const bang = font.glyphs["!".codePointAt(0) || 0];
     if (!em || !bang) throw new Error("uhhhhh");
 
     em.width.should.eql(5);
-    font.order.length.should.eql(128);
+    font.glyphs.length.should.eql(128);
     bang.width.should.eql(1);
 
     const fb2 = new Framebuffer(1, 8, 24);
@@ -110,8 +110,8 @@ describe("BitmapFont", () => {
   it("packs into rows", () => {
     const fb = readBmp(fs.readFileSync("src/test/data/tom-thumb-256.bmp"));
     const font = BitmapFont.importFromImage(fb);
-    const ee = font.glyphs.get(0x45);
-    const jay = font.glyphs.get(0x4a);
+    const ee = font.glyphs[0x45];
+    const jay = font.glyphs[0x4a];
     if (!ee || !jay) throw new Error("uhhhhh");
 
     ee.packIntoRows(BitDirection.LE).should.eql([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ]);
@@ -123,8 +123,8 @@ describe("BitmapFont", () => {
   it("packs into columns", () => {
     const fb = readBmp(fs.readFileSync("src/test/data/tom-thumb-256.bmp"));
     const font = BitmapFont.importFromImage(fb);
-    const ee = font.glyphs.get(0x45);
-    const jay = font.glyphs.get(0x4a);
+    const ee = font.glyphs[0x45];
+    const jay = font.glyphs[0x4a];
     if (!ee || !jay) throw new Error("uhhhhh");
 
     ee.packIntoColumns(BitDirection.LE).should.eql([ 0x1f, 0x15, 0x15, 0 ]);
@@ -135,10 +135,10 @@ describe("BitmapFont", () => {
 
   it("addFromRows", () => {
     const font = new BitmapFont(true);
-    font.add(0x45, Glyph.fromRows([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ], 4, BitDirection.LE));
-    font.add(0x4a, Glyph.fromRows([ 0x20, 0x20, 0x20, 0xa0, 0x40, 0 ], 4, BitDirection.BE));
-    const ee = font.glyphs.get(0x45);
-    const jay = font.glyphs.get(0x4a);
+    font.add(Glyph.fromRows([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ], 4, BitDirection.LE), [ "E" ]);
+    font.add(Glyph.fromRows([ 0x20, 0x20, 0x20, 0xa0, 0x40, 0 ], 4, BitDirection.BE), [ "J" ]);
+    const ee = font.find("E");
+    const jay = font.find("J");
     if (!ee || !jay) throw new Error("uhhhhh");
 
     ee.rawHex.should.eql("171707");
@@ -147,11 +147,11 @@ describe("BitmapFont", () => {
 
   it("addFromColumns", () => {
     const font = new BitmapFont(true);
-    font.add(0x45, Glyph.fromColumns([ 0x1f, 0x15, 0x15, 0 ], 6, BitDirection.LE));
-    font.add(0x4a, Glyph.fromColumns([ 0x10, 0x08, 0xf0, 0 ], 6, BitDirection.BE));
+    font.add(Glyph.fromColumns([ 0x1f, 0x15, 0x15, 0 ], 6, BitDirection.LE), [ "E" ]);
+    font.add(Glyph.fromColumns([ 0x10, 0x08, 0xf0, 0 ], 6, BitDirection.BE), [ "J" ]);
 
-    const ee = font.glyphs.get(0x45);
-    const jay = font.glyphs.get(0x4a);
+    const ee = font.find("E");
+    const jay = font.find("J");
     if (!ee || !jay) throw new Error("uhhhhh");
 
     ee.rawHex.should.eql("171707");
