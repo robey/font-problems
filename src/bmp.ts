@@ -59,7 +59,7 @@ export function writeBmp(framebuffer: Framebuffer): Buffer {
   header.writeUInt32LE(framebuffer.height, 22);
   header.writeUInt16LE(1, 26);  // "color planes"
   header.writeUInt16LE(framebuffer.colorDepth, 28);
-  header.writeUInt32LE(3, 30);  // no compression
+  header.writeUInt32LE(0, 30);  // no compression
   header.writeUInt32LE(0, 34);  // no size hint
   header.writeUInt32LE(0, 38);  // pixels per meter?
   header.writeUInt32LE(0, 42);  // pixels per meter?
