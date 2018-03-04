@@ -1,4 +1,4 @@
-import { unicodeFromRanges } from "../unicodes";
+import { tokenize, unicodeFromRanges } from "../unicodes";
 
 import "should";
 import "source-map-support/register";
@@ -28,4 +28,14 @@ describe("unicodes", () => {
   it("handles sets of ranges", () => {
     collect(unicodeFromRanges("9-11,x20-x22,99,4"), 10).should.eql([9, 10, 11, 32, 33, 34, 99, 4]);
   });
+
+
+  it("tokenizes", () => {
+    const tokens = tokenize("45=xff,;\n9001");
+    tokens.map(t => t.toString()).join(",").should.eql(
+      "DECIMAL(45)[1:0],EQUALS(=)[1:2],HEX(xff)[1:3],COMMA(,)[1:6],SEMICOLON(;)[1:7]," +
+      "LF(\n)[1:8],DECIMAL(9001)[2:1]"
+    );
+  });
+
 });
