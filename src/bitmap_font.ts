@@ -12,9 +12,6 @@ export interface ImportOptions {
 
   // if false, extra padding on the right of each glyph will be removed (default: true)
   isMonospace?: boolean;
-
-  // assign unicode code points to each glyph in order
-  codemap?: string[][];
 }
 
 /*
@@ -37,7 +34,7 @@ export class BitmapFont {
       const glyph = this.glyphs[0];
       return glyph ? glyph.width : 0;
     }
-    return Math.max(...Array.from(this.glyphs.values()).map(g => g.width));
+    return Math.max(...Array.from(this.glyphs).map(g => g.width));
   }
 
   add(glyph: Glyph, codes: string[]) {
@@ -46,6 +43,7 @@ export class BitmapFont {
     this.codemap.push(codes);
   }
 
+  // find the glyph for a character.
   find(code: string): Glyph | undefined {
     for (let i = 0; i < this.codemap.length; i++) {
       if (this.codemap[i].includes(code)) return this.glyphs[i];
@@ -70,6 +68,7 @@ export class BitmapFont {
     const xStride = this.maxCellWidth(), yStride = this.cellHeight;
     const width = xStride * glyphsPerRow, height = yStride * Math.ceil(this.glyphs.length / glyphsPerRow);
     const fb = new Framebuffer(width, height, 24);
+    fb.fill(bgColor);
 
     let x = 0, y = 0;
     this.glyphs.forEach(glyph => {
@@ -90,10 +89,7 @@ export class BitmapFont {
    * left edges and leave the extra space on the right.) the grid dimensions
    * can be determined heuristically if they aren't provided.
    *
-   * the unicode code-point generator should be some iterable (usually
-   * provided by `unicodeFromRanges`) that provides the sequence of code
-   * points (as numbers) to assign to each glyph in order. the default
-   * generator starts from code-point zero.
+   * the codemap should be set separately.
    */
   static importFromImage(image: Framebuffer, options: ImportOptions = {}) {
     if (!(options.cellWidth && options.cellHeight)) {
@@ -107,13 +103,12 @@ export class BitmapFont {
     const charColumns = image.width / options.cellWidth;
     const font = new BitmapFont(options.isMonospace);
 
-    if (!options.codemap) options.codemap = defaultCodemap(charRows * charColumns);
     let i = 0;
     for (let y = 0; y < charRows; y++) {
       for (let x = 0; x < charColumns; x++) {
         const px = x * options.cellWidth, py = y * options.cellHeight;
         const view = image.view(px, py, px + options.cellWidth, py + options.cellHeight);
-        font.add(Glyph.fromFramebuffer(view, options.isMonospace), options.codemap[i]);
+        font.add(Glyph.fromFramebuffer(view, options.isMonospace), [ String.fromCodePoint(i) ]);
         i++;
       }
     }

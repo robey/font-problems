@@ -8,8 +8,9 @@
   },
   "main": "lib/",
   "dependencies": {
+    "@types/minimist": "^1.2.0",
     "antsy": "*",
-    "minimist": "*",
+    "minimist": "^1.2.0",
     "source-map-support": "^0.5.3",
     "sprintf": "*"
   },
