@@ -1,7 +1,7 @@
 import { arrayGrouped, range } from "./arrays";
+import { defaultCodemap } from "./codemap";
 import { Framebuffer } from "./framebuffer";
 import { Glyph } from "./glyph";
-import { unicodeFromRanges } from "./unicodes";
 
 export interface ImportOptions {
   // width of each cell in the grid (default: guess)
@@ -14,7 +14,7 @@ export interface ImportOptions {
   isMonospace?: boolean;
 
   // assign unicode code points to each glyph in order
-  codePoints?: Iterable<number>;
+  codemap?: string[][];
 }
 
 /*
@@ -102,18 +102,19 @@ export class BitmapFont {
       options.cellHeight = height;
     }
     if (options.isMonospace === undefined) options.isMonospace = true;
-    if (!options.codePoints) options.codePoints = unicodeFromRanges("0-");
 
     const charRows = image.height / options.cellHeight;
     const charColumns = image.width / options.cellWidth;
     const font = new BitmapFont(options.isMonospace);
 
-    const unicode = options.codePoints[Symbol.iterator]();
+    if (!options.codemap) options.codemap = defaultCodemap(charRows * charColumns);
+    let i = 0;
     for (let y = 0; y < charRows; y++) {
       for (let x = 0; x < charColumns; x++) {
         const px = x * options.cellWidth, py = y * options.cellHeight;
         const view = image.view(px, py, px + options.cellWidth, py + options.cellHeight);
-        font.add(Glyph.fromFramebuffer(view, options.isMonospace), [ String.fromCodePoint(unicode.next().value) ]);
+        font.add(Glyph.fromFramebuffer(view, options.isMonospace), options.codemap[i]);
+        i++;
       }
     }
     return font;
