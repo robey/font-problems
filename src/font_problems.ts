@@ -4,6 +4,7 @@ import * as path from "path";
 import { BitmapFont, ImportOptions } from "./bitmap_font";
 import { readBmp, writeBmp } from "./bmp";
 import { dumpCodemap, parseCodemap } from "./codemap";
+import { exportAscii } from "./export_font";
 import { Framebuffer } from "./framebuffer";
 import { readPsf, writePsf } from "./psf";
 
@@ -36,10 +37,14 @@ Input options:
         to each glyph (see docs for a description of this format)
 
 Output options:
+    --ascii
+        dump out the font in ASCII, using @ for pixels
+    --termwidth <N>
+        width of the terminal when dumping ASCII
     --write-map
         also write a ".psfmap" file with the glyph-to-unicode maps
     --rowsize <N>
-        how many glyphs to draw on each line, for BMP or ASCII
+        how many glyphs to draw on each line for BMP
     --fg <hex>
         foreground color (default "000000") when writing a BMP file
     --bg <hex>
@@ -81,10 +86,12 @@ Output options:
 
 const MINIMIST_OPTIONS = {
   default: {
+    ascii: false,
     bg: "ffffff",
     fg: "000000",
     monospace: false,
     rowsize: "16",
+    termwidth: "80",
     verbose: false,
   },
   alias: {
@@ -102,7 +109,7 @@ const MINIMIST_OPTIONS = {
   ],
   boolean: [
     "monospace",
-  //   "ascii",
+    "ascii",
     "verbose",
     "write-map",
   ]
@@ -137,6 +144,10 @@ export function main() {
           verbose(options, `Wrote codemap file: ${mapFilename}`);
         }
       }
+    }
+    if (options.ascii) {
+      const rowsize = parseInt(options.termwidth, 10);
+      exportAscii(font, rowsize).forEach(line => process.stdout.write(line + "\n"));
     }
   } catch (error) {
     die(error);
