@@ -4,7 +4,7 @@ import * as path from "path";
 import { BitmapFont, ImportOptions } from "./bitmap_font";
 import { readBmp, writeBmp } from "./bmp";
 import { dumpCodemap, parseCodemap } from "./codemap";
-import { exportAscii, exportC, ExportCOptions } from "./export_font";
+import { exportAscii, exportC, ExportOptions, exportRust } from "./export_font";
 import { Framebuffer } from "./framebuffer";
 import { BitDirection } from "./glyph";
 import { readPsf, writePsf } from "./psf";
@@ -198,16 +198,17 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
       verbose(options, `Wrote PSF file: ${filename}`);
       return;
 
-    case ".bmp":
+    case ".bmp": {
       const rowsize = parseInt(options.rowsize, 10);
       const fg = parseInt(options.fg, 16), bg = parseInt(options.bg, 16);
       const fb = font.dumpIntoFramebuffer(rowsize, fg, bg);
       fs.writeFileSync(filename, writeBmp(fb));
       verbose(options, `Wrote ${fb.width} x ${fb.height} BMP file: ${filename}`);
       return;
+    }
 
-    case ".h":
-      const cOptions: ExportCOptions = { columns: false, direction: BitDirection.LE };
+    case ".h": {
+      const cOptions: ExportOptions = { columns: false, direction: BitDirection.LE };
       if (options.vertical) cOptions.columns = true;
       if (options["big-endian"]) cOptions.direction = BitDirection.BE;
       if (options.offsets) cOptions.includeOffsets = true;
@@ -216,6 +217,19 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
       const orientation = cOptions.columns ? "columns" : "rows";
       verbose(options, `Wrote C header file (${endian}-endian ${orientation}): ${filename}`);
       return;
+    }
+
+    case ".rs": {
+      const cOptions: ExportOptions = { columns: false, direction: BitDirection.LE };
+      if (options.vertical) cOptions.columns = true;
+      if (options["big-endian"]) cOptions.direction = BitDirection.BE;
+      if (options.offsets) cOptions.includeOffsets = true;
+      fs.writeFileSync(filename, exportRust(path.basename(filename, ext), font, cOptions));
+      const endian = cOptions.direction == BitDirection.LE ? "little" : "big";
+      const orientation = cOptions.columns ? "columns" : "rows";
+      verbose(options, `Wrote rust header file (${endian}-endian ${orientation}): ${filename}`);
+      return;
+    }
 
     default:
       throw new Error(`Unsupported input file type: ${ext}`);

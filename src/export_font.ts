@@ -34,7 +34,7 @@ export function exportAscii(font: BitmapFont, lineWidth: number = 80): string[] 
 }
 
 
-export interface ExportCOptions {
+export interface ExportOptions {
   // rows or columns?
   columns?: boolean;
 
@@ -50,7 +50,49 @@ export interface ExportCOptions {
  * generate a C header file with the font data as either rows or columns, in
  * big or little endian order.
  */
-export function exportC(name: string, font: BitmapFont, options: ExportCOptions = {}): string {
+export function exportC(name: string, font: BitmapFont, options: ExportOptions = {}): string {
+  const { glyphData, offsets } = packCodeExport(font, options);
+
+  let text = "";
+  text += `const int ${name}_font_glyphs = ${font.glyphs.length};\n`;
+  text += `const int ${name}_font_height = ${font.cellHeight};\n`;
+  if (font.isMonospace) text += `const int ${name}_font_width = ${font.maxCellWidth()};\n`;
+  if (options.includeOffsets) {
+    text += `const int ${name}_font_offsets[${glyphData.length + 1}] = { ${offsets.join(", ")} };\n`;
+  }
+  text += `const unsigned int ${name}_font_data[${offsets[offsets.length - 1]}] = {\n`;
+  glyphData.forEach(cell => {
+    text += "  " + cell.map(n => "0x" + hex(n, 8)).join(", ") + ", \n";
+  });
+  text += "};\n";
+  return text;
+}
+
+/*
+ * generate a rust code file with the font data as either rows or columns, in
+ * big or little endian order.
+ */
+export function exportRust(name: string, font: BitmapFont, options: ExportOptions = {}): string {
+  const { glyphData, offsets } = packCodeExport(font, options);
+  const caps = name.toUpperCase();
+  const dead = `#[allow(dead_code)]\n`;
+
+  let text = "";
+  text += `${dead}pub const ${caps}_FONT_GLYPHS: usize = ${font.glyphs.length};\n`;
+  text += `${dead}pub const ${caps}_FONT_HEIGHT: usize = ${font.cellHeight};\n`;
+  if (font.isMonospace) text += `${dead}pub const ${caps}_FONT_WIDTH: usize = ${font.maxCellWidth()};\n`;
+  if (options.includeOffsets) {
+    text += `${dead}pub const ${caps}_FONT_OFFSETS: [usize; ${glyphData.length + 1}] = [ ${offsets.join(", ")} ];\n`;
+  }
+  text += `${dead}pub const ${caps}_FONT_DATA: [u32; ${offsets[offsets.length - 1]}] = [\n`;
+  glyphData.forEach(cell => {
+    text += "  " + cell.map(n => "0x" + hex(n, 8)).join(", ") + ", \n";
+  });
+  text += "];\n";
+  return text;
+}
+
+function packCodeExport(font: BitmapFont, options: ExportOptions = {}): { glyphData: number[][], offsets: number[] } {
   if (options.columns === undefined) options.columns = false;
   if (options.direction === undefined) options.direction = BitDirection.LE;
   if (options.includeOffsets === undefined) options.includeOffsets = options.columns && !font.isMonospace;
@@ -63,19 +105,7 @@ export function exportC(name: string, font: BitmapFont, options: ExportCOptions 
     offsets.push(total);
     return data;
   });
-
-  let text = "";
-  text += `const int ${name}_font_height = ${font.cellHeight};\n`;
-  if (font.isMonospace) text += `const int ${name}_font_width = ${font.maxCellWidth()};\n`;
-  if (options.includeOffsets) {
-    text += `const int ${name}_font_offsets[${glyphData.length + 1}] = { ${offsets.join(", ")} };\n`;
-  }
-  text += `const unsigned int ${name}_font_data[${total}] = {\n`;
-  glyphData.forEach(cell => {
-    text += "  " + cell.map(n => "0x" + hex(n, 8)).join(", ") + ", \n";
-  });
-  text += "};\n";
-  return text;
+  return { glyphData, offsets };
 }
 
 function hex(n: number, width: number): string {
