@@ -4,8 +4,9 @@ import * as path from "path";
 import { BitmapFont, ImportOptions } from "./bitmap_font";
 import { readBmp, writeBmp } from "./bmp";
 import { dumpCodemap, parseCodemap } from "./codemap";
-import { exportAscii } from "./export_font";
+import { exportAscii, exportC, ExportCOptions } from "./export_font";
 import { Framebuffer } from "./framebuffer";
+import { BitDirection } from "./glyph";
 import { readPsf, writePsf } from "./psf";
 
 import "source-map-support/register";
@@ -45,6 +46,16 @@ Output options:
         also write a ".psfmap" file with the glyph-to-unicode maps
     --rowsize <N>
         how many glyphs to draw on each line for BMP
+    --vertical
+        when exporting to C or rust, use vertical columns as the values for
+        each glyph (horizontal rows are default)
+    --big-endian
+        when exporting to C or rust, write the left or top pixels into the
+        high bits (little-endian, the low bits, is the default)
+    --offsets
+        when exporting to C or rust, include a table of the offsets of each
+        glyph in the data table (by default, this only happens with
+        proportional fonts in vertical mode)
     --fg <hex>
         foreground color (default "000000") when writing a BMP file
     --bg <hex>
@@ -108,9 +119,12 @@ const MINIMIST_OPTIONS = {
     "width",
   ],
   boolean: [
-    "monospace",
     "ascii",
+    "big-endian",
+    "monospace",
+    "offsets",
     "verbose",
+    "vertical",
     "write-map",
   ]
 };
@@ -190,6 +204,17 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
       const fb = font.dumpIntoFramebuffer(rowsize, fg, bg);
       fs.writeFileSync(filename, writeBmp(fb));
       verbose(options, `Wrote ${fb.width} x ${fb.height} BMP file: ${filename}`);
+      return;
+
+    case ".h":
+      const cOptions: ExportCOptions = { columns: false, direction: BitDirection.LE };
+      if (options.vertical) cOptions.columns = true;
+      if (options["big-endian"]) cOptions.direction = BitDirection.BE;
+      if (options.offsets) cOptions.includeOffsets = true;
+      fs.writeFileSync(filename, exportC(path.basename(filename, ext), font, cOptions));
+      const endian = cOptions.direction == BitDirection.LE ? "little" : "big";
+      const orientation = cOptions.columns ? "columns" : "rows";
+      verbose(options, `Wrote C header file (${endian}-endian ${orientation}): ${filename}`);
       return;
 
     default:

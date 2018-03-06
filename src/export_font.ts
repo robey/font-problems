@@ -1,5 +1,6 @@
 import { range } from "./arrays";
 import { BitmapFont } from "./bitmap_font";
+import { BitDirection } from "./glyph";
 
 // various ways to lossily export a font.
 
@@ -30,4 +31,53 @@ export function exportAscii(font: BitmapFont, lineWidth: number = 80): string[] 
     range(label.length, width).forEach(_ => buffer[py + font.cellHeight].push(" "));
   });
   return buffer.map(line => line.join(""));
+}
+
+
+export interface ExportCOptions {
+  // rows or columns?
+  columns?: boolean;
+
+  // big or little endian?
+  direction?: BitDirection;
+
+  // include the offsets of each glyph in the data table?
+  // (this is really only necessary for proportional fonts stored as columns)
+  includeOffsets?: boolean;
+}
+
+/*
+ * generate a C header file with the font data as either rows or columns, in
+ * big or little endian order.
+ */
+export function exportC(name: string, font: BitmapFont, options: ExportCOptions = {}): string {
+  if (options.columns === undefined) options.columns = false;
+  if (options.direction === undefined) options.direction = BitDirection.LE;
+  if (options.includeOffsets === undefined) options.includeOffsets = options.columns && !font.isMonospace;
+
+  let total = 0;
+  const offsets: number[] = [ 0 ];
+  const glyphData = font.glyphs.map(g => {
+    const data = options.columns ? g.packIntoColumns(options.direction) : g.packIntoRows(options.direction);
+    total += data.length;
+    offsets.push(total);
+    return data;
+  });
+
+  let text = "";
+  text += `const int ${name}_font_height = ${font.cellHeight};\n`;
+  if (font.isMonospace) text += `const int ${name}_font_width = ${font.maxCellWidth()};\n`;
+  if (options.includeOffsets) {
+    text += `const int ${name}_font_offsets[${glyphData.length + 1}] = { ${offsets.join(", ")} };\n`;
+  }
+  text += `const unsigned int ${name}_font_data[${total}] = {\n`;
+  glyphData.forEach(cell => {
+    text += "  " + cell.map(n => "0x" + hex(n, 8)).join(", ") + ", \n";
+  });
+  text += "};\n";
+  return text;
+}
+
+function hex(n: number, width: number): string {
+  return ("0000000000" + n.toString(16)).slice(-width);
 }
