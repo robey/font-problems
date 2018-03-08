@@ -27,6 +27,8 @@ Supported formats are:
     .rs     rust header (output only)
 
 Input options:
+    --monospace, -m
+        treat an imported image as monospace instead of proportional
     --width <number>
         specify the width of the grid when loading a font from a BMP file
         (by default, it will try to guess)
@@ -38,6 +40,8 @@ Input options:
         to each glyph (see docs for a description of this format)
 
 Output options:
+    --verbose, -v
+        describe to stdout what it's doing
     --ascii
         dump out the font in ASCII, using @ for pixels
     --termwidth <N>
@@ -63,37 +67,18 @@ Output options:
     --sample <text>
         instead of writing a BMP of the font contents, write a BMP of some
         sample text
+    --scale <N>
+        turn each pixel into an NxN square in the output
+
+Examples:
+    font-problems -m tom-thumb.bmp --ascii
+        import a font from a BMP file and display it as ASCII art
+
+    font-problems --vertical terminal.psf terminal.h
+        read a PSF file and export a C header file describing each glyph as
+        a series of ints that each describe one column (useful for embedded
+        projects)
 `;
-
-
-// examples:
-//     font-problems -m tom-thumb.bmp -A
-//         Read a font and display it as ascii art.
-//
-//     font-problems -m lola.bmp -P -m 0-127,x2500-
-//         Generate a PSF with the first 128 chars as ascii, then the next 128
-//         starting at code-point 0x2500.
-//
-// options:
-//     -o <filename>
-//         output file
-//     --monospace, -m
-//         treat font as monospace
-//     --ascii, -A
-//         dump the font back out as ascii art
-//     --header, -H
-//         dump a header file in "matrix LED" format
-//     --rust, -R
-//         dump a rust header file in "matrix LED" format
-//     --psf, -P
-//         dump a PSF v2 file (linux console format)
-//     --fmap, -F
-//         also dump out an fmap file of codepoint maps
-//     --bmp, -B
-//         also write a BMP of the font
-//     --import, -i
-//         import font from an existing PSF file
-// `;
 
 const MINIMIST_OPTIONS = {
   default: {
@@ -116,6 +101,7 @@ const MINIMIST_OPTIONS = {
     "map",
     "rowsize",
     "sample",
+    "scale",
     "width",
   ],
   boolean: [
@@ -145,6 +131,9 @@ export function main() {
     const font = loadFont(options, inFilename);
     verbose(options, `Loaded font ${inFilename}: ${font.glyphs.length} glyphs, ` +
       (font.isMonospace ? "monospace" : "proportional") + `, ${font.maxCellWidth()} x ${font.cellHeight}`);
+
+    if (options.scale) font.scale(parseInt(options.scale, 10));
+
     if (outFilename) {
       if (options.sample) {
         const fb = writeSample(options, font, options.sample);

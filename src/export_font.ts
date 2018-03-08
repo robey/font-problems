@@ -51,18 +51,22 @@ export interface ExportOptions {
  * big or little endian order.
  */
 export function exportC(name: string, font: BitmapFont, options: ExportOptions = {}): string {
-  const { glyphData, offsets } = packCodeExport(font, options);
+  const { desc, glyphData, offsets, bits } = packCodeExport(font, options);
 
   let text = "";
+  text += `/* ${desc} */\n\n`;
+
   text += `const int ${name}_font_glyphs = ${font.glyphs.length};\n`;
   text += `const int ${name}_font_height = ${font.cellHeight};\n`;
   if (font.isMonospace) text += `const int ${name}_font_width = ${font.maxCellWidth()};\n`;
   if (options.includeOffsets) {
     text += `const int ${name}_font_offsets[${glyphData.length + 1}] = { ${offsets.join(", ")} };\n`;
   }
+  text += "\n";
   text += `const unsigned int ${name}_font_data[${offsets[offsets.length - 1]}] = {\n`;
-  glyphData.forEach(cell => {
-    text += "  " + cell.map(n => "0x" + hex(n, 8)).join(", ") + ", \n";
+  glyphData.forEach((cell, i) => {
+    const marker = (i > 0 && (i % 5 == 0)) ? `/* ${i} */` : "";
+    text += "  " + cell.map(n => "0x" + hex(n, Math.ceil(bits / 4))).join(", ") + ", " + marker + "\n";
   });
   text += "};\n";
   return text;
@@ -73,29 +77,49 @@ export function exportC(name: string, font: BitmapFont, options: ExportOptions =
  * big or little endian order.
  */
 export function exportRust(name: string, font: BitmapFont, options: ExportOptions = {}): string {
-  const { glyphData, offsets } = packCodeExport(font, options);
+  const { desc, glyphData, offsets, bits } = packCodeExport(font, options);
   const caps = name.toUpperCase();
   const dead = `#[allow(dead_code)]\n`;
 
   let text = "";
+  text += `// ${desc}\n\n`;
+
   text += `${dead}pub const ${caps}_FONT_GLYPHS: usize = ${font.glyphs.length};\n`;
   text += `${dead}pub const ${caps}_FONT_HEIGHT: usize = ${font.cellHeight};\n`;
   if (font.isMonospace) text += `${dead}pub const ${caps}_FONT_WIDTH: usize = ${font.maxCellWidth()};\n`;
   if (options.includeOffsets) {
     text += `${dead}pub const ${caps}_FONT_OFFSETS: [usize; ${glyphData.length + 1}] = [ ${offsets.join(", ")} ];\n`;
   }
+  text += "\n";
   text += `${dead}pub const ${caps}_FONT_DATA: [u32; ${offsets[offsets.length - 1]}] = [\n`;
-  glyphData.forEach(cell => {
-    text += "  " + cell.map(n => "0x" + hex(n, 8)).join(", ") + ", \n";
+  glyphData.forEach((cell, i) => {
+    const marker = (i > 0 && (i % 5 == 0)) ? `// ${i}` : "";
+    text += "  " + cell.map(n => "0x" + hex(n, Math.ceil(bits / 4))).join(", ") + ", " + marker + "\n";
   });
   text += "];\n";
   return text;
 }
 
-function packCodeExport(font: BitmapFont, options: ExportOptions = {}): { glyphData: number[][], offsets: number[] } {
+interface Exported {
+  desc: string;
+  glyphData: number[][];
+  offsets: number[];
+  bits: number;
+}
+
+function packCodeExport(font: BitmapFont, options: ExportOptions = {}): Exported {
   if (options.columns === undefined) options.columns = false;
   if (options.direction === undefined) options.direction = BitDirection.LE;
   if (options.includeOffsets === undefined) options.includeOffsets = options.columns && !font.isMonospace;
+
+  const descEndian = (options.direction == BitDirection.LE ? "little" : "big") + "-endian";
+  const edgeEndian = (options.direction == BitDirection.LE ?
+    (options.columns ? "top" : "left") :
+    (options.columns ? "bottom" : "right"));
+  const explainEndian = `smallest bit on ${edgeEndian}`;
+  const desc = `${options.columns ? "column" : "row"} data, ${descEndian} (${explainEndian})`;
+
+  const bits = options.columns ? font.cellHeight : font.maxCellWidth();
 
   let total = 0;
   const offsets: number[] = [ 0 ];
@@ -105,7 +129,7 @@ function packCodeExport(font: BitmapFont, options: ExportOptions = {}): { glyphD
     offsets.push(total);
     return data;
   });
-  return { glyphData, offsets };
+  return { desc, glyphData, offsets, bits };
 }
 
 function hex(n: number, width: number): string {

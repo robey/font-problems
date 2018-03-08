@@ -19,7 +19,7 @@ export function defaultCodemap(count: number, start: number = 0): string[][] {
 }
 
 /*
- * lines ::= line (("\n"|".") line)*
+ * lines ::= line ("\n" line)*
  * line ::= [index ":"] sequence ("," sequence)*
  * sequence ::= codepoint (";" codepoint)*
  * index ::= <hex>
