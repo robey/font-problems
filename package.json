@@ -35,5 +35,5 @@
     "test": "npm run build && mocha -R spec --colors --recursive lib/test"
   },
   "author": "Robey Pointer <robeypointer@gmail.com>",
-  "license": "Apache-2"
+  "license": "Apache-2.0"
 }
