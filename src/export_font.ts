@@ -45,6 +45,9 @@ export interface ExportOptions {
   // (this is really only necessary for proportional fonts stored as columns)
   includeOffsets?: boolean;
 
+  // include the unicode codepoint mapping tables?
+  includeCodemap?: boolean;
+
   // override the cell data type? (usually "unsigned int" or "u8", "u16", "u32")
   datatype?: string;
 }
@@ -54,7 +57,7 @@ export interface ExportOptions {
  * big or little endian order.
  */
 export function exportC(name: string, font: BitmapFont, options: ExportOptions = {}): string {
-  const { desc, glyphData, offsets, bits } = packCodeExport(font, options);
+  const { desc, glyphData, offsets, bits, codemap } = packCodeExport(font, options);
   const datatype = options.datatype || "unsigned int";
 
   let text = "";
@@ -73,6 +76,19 @@ export function exportC(name: string, font: BitmapFont, options: ExportOptions =
     text += "  " + cell.map(n => "0x" + hex(n, Math.ceil(bits / 4))).join(", ") + ", " + marker + "\n";
   });
   text += "};\n";
+
+  if (options.includeCodemap) {
+    text += "\n/*\n";
+    text += " * use binary search on font_codepoints to see if a codepoint is represented.\n";
+    text += " * if it is, use that index into font_codepointsmap to find the glyph index.\n";
+    text += " */\n\n";
+    const codepoints = codemap.map(c => c[0]).join(", ");
+    const codepointsMap = codemap.map(c => c[1]).join(", ");
+    text += `const int ${name}_font_codepoints[${codemap.length}] = { ${codepoints} };\n`;
+    text += "\n";
+    text += `const int ${name}_font_codepoints_map[${codemap.length}] = { ${codepointsMap} };\n`
+  }
+
   return text;
 }
 
@@ -81,7 +97,7 @@ export function exportC(name: string, font: BitmapFont, options: ExportOptions =
  * big or little endian order.
  */
 export function exportRust(name: string, font: BitmapFont, options: ExportOptions = {}): string {
-  const { desc, glyphData, offsets, bits } = packCodeExport(font, options);
+  const { desc, glyphData, offsets, bits, codemap } = packCodeExport(font, options);
   const dead = `#[allow(dead_code)]\n`;
   const wordsize = bits > 16 ? 32 : (bits > 8 ? 16 : 8);
   const datatype = options.datatype || `u${wordsize}`;
@@ -102,6 +118,19 @@ export function exportRust(name: string, font: BitmapFont, options: ExportOption
     text += "  " + cell.map(n => "0x" + hex(n, Math.ceil(bits / 4))).join(", ") + ", " + marker + "\n";
   });
   text += "];\n";
+
+  if (options.includeCodemap) {
+    text += "\n";
+    text += "// use binary_search on FONT_CODEPOINTS to see if a codepoint is represented.\n";
+    text += "// if it is, use that index into FONT_CODEPOINTS_MAP to find the glyph index.\n";
+    text += "\n";
+    const codepoints = codemap.map(c => c[0]).join(", ");
+    const codepointsMap = codemap.map(c => c[1]).join(", ");
+    text += `${dead}pub const FONT_CODEPOINTS: [char; ${codemap.length}] = [ ${codepoints} ];\n`;
+    text += "\n";
+    text += `${dead}pub const FONT_CODEPOINTS_MAP: [usize; ${codemap.length}] = [ ${codepointsMap} ];\n`
+  }
+
   return text;
 }
 
@@ -110,6 +139,7 @@ interface Exported {
   glyphData: number[][];
   offsets: number[];
   bits: number;
+  codemap: [ number, number ][];
 }
 
 function packCodeExport(font: BitmapFont, options: ExportOptions = {}): Exported {
@@ -134,7 +164,16 @@ function packCodeExport(font: BitmapFont, options: ExportOptions = {}): Exported
     offsets.push(total);
     return data;
   });
-  return { desc, glyphData, offsets, bits };
+
+  // turn into list of [ glyph id, codes... ], ignoring multi-char strings
+  const codemap: [ number, number ][] = [];
+  font.codemap.forEach((codes, i) => {
+    codes.filter(s => s.length == 1).map(s => s.charCodeAt(0)).forEach(code => {
+      codemap.push([ code, i ]);
+    });
+  });
+  codemap.sort(([ c1, i1 ], [ c2, i2 ]) => c1 - c2);
+  return { desc, glyphData, offsets, bits, codemap };
 }
 
 function hex(n: number, width: number): string {

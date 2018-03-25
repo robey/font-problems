@@ -62,6 +62,9 @@ Output options:
         when exporting to C or Rust, include a table of the offsets of each
         glyph in the data table (by default, this only happens with
         proportional fonts in vertical mode)
+    --codemap
+        when exporting to C or Rust, include a table of the unicode codepoint
+        mappings
     --datatype <name>
         when exporting to C or Rust, use this named int type for the cell
         data instead of "unsigend int" in C, or "u8", "u16", "u32" (depending
@@ -90,6 +93,7 @@ const MINIMIST_OPTIONS = {
   default: {
     ascii: false,
     bg: "ffffff",
+    codemap: false,
     fg: "000000",
     monospace: false,
     reversed: false,
@@ -115,6 +119,7 @@ const MINIMIST_OPTIONS = {
   boolean: [
     "ascii",
     "big-endian",
+    "codemap",
     "monospace",
     "offsets",
     "reversed",
@@ -192,7 +197,7 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
 
   switch (ext) {
     case ".psf":
-      fs.writeFileSync(filename, writePsf(font));
+      fs.writeFileSync(filename, writePsf(font, { withMap: true }));
       verbose(options, `Wrote PSF file: ${filename}`);
       return;
 
@@ -211,6 +216,7 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
       if (options["big-endian"]) cOptions.direction = BitDirection.BE;
       if (options.offsets) cOptions.includeOffsets = true;
       if (options.datatype) cOptions.datatype = options.datatype;
+      if (options.codemap) cOptions.includeCodemap = true;
       fs.writeFileSync(filename, exportC(path.basename(filename, ext), font, cOptions));
       const endian = cOptions.direction == BitDirection.LE ? "little" : "big";
       const orientation = cOptions.columns ? "columns" : "rows";
@@ -224,6 +230,7 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
       if (options["big-endian"]) cOptions.direction = BitDirection.BE;
       if (options.offsets) cOptions.includeOffsets = true;
       if (options.datatype) cOptions.datatype = options.datatype;
+      if (options.codemap) cOptions.includeCodemap = true;
       fs.writeFileSync(filename, exportRust(path.basename(filename, ext), font, cOptions));
       const endian = cOptions.direction == BitDirection.LE ? "little" : "big";
       const orientation = cOptions.columns ? "columns" : "rows";
