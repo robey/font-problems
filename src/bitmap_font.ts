@@ -12,6 +12,9 @@ export interface ImportOptions {
 
   // if false, extra padding on the right of each glyph will be removed (default: true)
   isMonospace?: boolean;
+
+  // if true, the image is white-on-black, instead of black-on-white
+  reversed?: boolean;
 }
 
 /*
@@ -92,6 +95,12 @@ export class BitmapFont {
    * the codemap should be set separately.
    */
   static importFromImage(image: Framebuffer, options: ImportOptions = {}) {
+    if (options.reversed) {
+      range(0, image.height).map(py => range(0, image.width).map(px => {
+        image.setPixel(px, py, image.isOn(px, py) ? 0 : 0xffffff);
+      }));
+    }
+
     if (!(options.cellWidth && options.cellHeight)) {
       const { width, height } = sniffBoundaries(image);
       options.cellWidth = width;

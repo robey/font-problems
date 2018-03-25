@@ -29,6 +29,8 @@ Supported formats are:
 Input options:
     --monospace, -m
         treat an imported image as monospace instead of proportional
+    --reversed
+        the BMP is white-on-black, instead of black-on-white
     --width <number>
         specify the width of the grid when loading a font from a BMP file
         (by default, it will try to guess)
@@ -86,6 +88,7 @@ const MINIMIST_OPTIONS = {
     bg: "ffffff",
     fg: "000000",
     monospace: false,
+    reversed: false,
     rowsize: "16",
     termwidth: "80",
     verbose: false,
@@ -109,6 +112,7 @@ const MINIMIST_OPTIONS = {
     "big-endian",
     "monospace",
     "offsets",
+    "reversed",
     "verbose",
     "vertical",
     "write-map",
@@ -166,7 +170,7 @@ function loadFont(options: minimist.ParsedArgs, filename: string, ext?: string):
 
     case ".bmp":
       const fb = readBmp(fs.readFileSync(filename));
-      const importOptions: ImportOptions = { isMonospace: options.monospace };
+      const importOptions: ImportOptions = { isMonospace: options.monospace, reversed: options.reversed };
       if (options.width) importOptions.cellWidth = parseInt(options.width, 10);
       if (options.height) importOptions.cellHeight = parseInt(options.height, 10);
       const font = BitmapFont.importFromImage(fb, importOptions);
