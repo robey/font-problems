@@ -24,7 +24,7 @@ Supported formats are:
     .bmp    grid of glyphs
     .psf    portable screen font (used by unix terminal consoles)
     .h      C header (output only)
-    .rs     rust header (output only)
+    .rs     Rust header (output only)
 
 Input options:
     --monospace, -m
@@ -53,15 +53,19 @@ Output options:
     --rowsize <N>
         how many glyphs to draw on each line for BMP
     --vertical
-        when exporting to C or rust, use vertical columns as the values for
+        when exporting to C or Rust, use vertical columns as the values for
         each glyph (horizontal rows are default)
     --big-endian
-        when exporting to C or rust, write the left or top pixels into the
+        when exporting to C or Rust, write the left or top pixels into the
         high bits (little-endian, the low bits, is the default)
     --offsets
-        when exporting to C or rust, include a table of the offsets of each
+        when exporting to C or Rust, include a table of the offsets of each
         glyph in the data table (by default, this only happens with
         proportional fonts in vertical mode)
+    --datatype <name>
+        when exporting to C or Rust, use this named int type for the cell
+        data instead of "unsigend int" in C, or "u8", "u16", "u32" (depending
+        on data size) in Rust
     --fg <hex>
         foreground color (default "000000") when writing a BMP file
     --bg <hex>
@@ -99,6 +103,7 @@ const MINIMIST_OPTIONS = {
   },
   string: [
     "bg",
+    "datatype",
     "fg",
     "height",
     "map",
@@ -205,6 +210,7 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
       if (options.vertical) cOptions.columns = true;
       if (options["big-endian"]) cOptions.direction = BitDirection.BE;
       if (options.offsets) cOptions.includeOffsets = true;
+      if (options.datatype) cOptions.datatype = options.datatype;
       fs.writeFileSync(filename, exportC(path.basename(filename, ext), font, cOptions));
       const endian = cOptions.direction == BitDirection.LE ? "little" : "big";
       const orientation = cOptions.columns ? "columns" : "rows";
@@ -217,10 +223,11 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
       if (options.vertical) cOptions.columns = true;
       if (options["big-endian"]) cOptions.direction = BitDirection.BE;
       if (options.offsets) cOptions.includeOffsets = true;
+      if (options.datatype) cOptions.datatype = options.datatype;
       fs.writeFileSync(filename, exportRust(path.basename(filename, ext), font, cOptions));
       const endian = cOptions.direction == BitDirection.LE ? "little" : "big";
       const orientation = cOptions.columns ? "columns" : "rows";
-      verbose(options, `Wrote rust header file (${endian}-endian ${orientation}): ${filename}`);
+      verbose(options, `Wrote Rust header file (${endian}-endian ${orientation}): ${filename}`);
       return;
     }
 

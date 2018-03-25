@@ -44,6 +44,9 @@ export interface ExportOptions {
   // include the offsets of each glyph in the data table?
   // (this is really only necessary for proportional fonts stored as columns)
   includeOffsets?: boolean;
+
+  // override the cell data type? (usually "unsigned int" or "u8", "u16", "u32")
+  datatype?: string;
 }
 
 /*
@@ -52,6 +55,7 @@ export interface ExportOptions {
  */
 export function exportC(name: string, font: BitmapFont, options: ExportOptions = {}): string {
   const { desc, glyphData, offsets, bits } = packCodeExport(font, options);
+  const datatype = options.datatype || "unsigned int";
 
   let text = "";
   text += `/* ${desc} */\n\n`;
@@ -63,7 +67,7 @@ export function exportC(name: string, font: BitmapFont, options: ExportOptions =
     text += `const int ${name}_font_offsets[${glyphData.length + 1}] = { ${offsets.join(", ")} };\n`;
   }
   text += "\n";
-  text += `const unsigned int ${name}_font_data[${offsets[offsets.length - 1]}] = {\n`;
+  text += `const ${datatype} ${name}_font_data[${offsets[offsets.length - 1]}] = {\n`;
   glyphData.forEach((cell, i) => {
     const marker = (i > 0 && (i % 5 == 0)) ? `/* ${i} */` : "";
     text += "  " + cell.map(n => "0x" + hex(n, Math.ceil(bits / 4))).join(", ") + ", " + marker + "\n";
@@ -78,20 +82,21 @@ export function exportC(name: string, font: BitmapFont, options: ExportOptions =
  */
 export function exportRust(name: string, font: BitmapFont, options: ExportOptions = {}): string {
   const { desc, glyphData, offsets, bits } = packCodeExport(font, options);
-  const caps = name.toUpperCase();
   const dead = `#[allow(dead_code)]\n`;
+  const wordsize = bits > 16 ? 32 : (bits > 8 ? 16 : 8);
+  const datatype = options.datatype || `u${wordsize}`;
 
   let text = "";
   text += `// ${desc}\n\n`;
 
-  text += `${dead}pub const ${caps}_FONT_GLYPHS: usize = ${font.glyphs.length};\n`;
-  text += `${dead}pub const ${caps}_FONT_HEIGHT: usize = ${font.cellHeight};\n`;
-  if (font.isMonospace) text += `${dead}pub const ${caps}_FONT_WIDTH: usize = ${font.maxCellWidth()};\n`;
+  text += `${dead}pub const FONT_GLYPHS: usize = ${font.glyphs.length};\n`;
+  text += `${dead}pub const FONT_HEIGHT: usize = ${font.cellHeight};\n`;
+  if (font.isMonospace) text += `${dead}pub const FONT_WIDTH: usize = ${font.maxCellWidth()};\n`;
   if (options.includeOffsets) {
-    text += `${dead}pub const ${caps}_FONT_OFFSETS: [usize; ${glyphData.length + 1}] = [ ${offsets.join(", ")} ];\n`;
+    text += `${dead}pub const FONT_OFFSETS: [usize; ${glyphData.length + 1}] = [ ${offsets.join(", ")} ];\n`;
   }
   text += "\n";
-  text += `${dead}pub const ${caps}_FONT_DATA: [u32; ${offsets[offsets.length - 1]}] = [\n`;
+  text += `${dead}pub const FONT_DATA: [${datatype}; ${offsets[offsets.length - 1]}] = [\n`;
   glyphData.forEach((cell, i) => {
     const marker = (i > 0 && (i % 5 == 0)) ? `// ${i}` : "";
     text += "  " + cell.map(n => "0x" + hex(n, Math.ceil(bits / 4))).join(", ") + ", " + marker + "\n";
