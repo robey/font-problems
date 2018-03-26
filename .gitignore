@@ -1,5 +1,7 @@
 .plz/
 lib/
 node_modules/
+/old-fonts/
 *.sublime-project
 *.sublime-workspace
+*.code-workspace

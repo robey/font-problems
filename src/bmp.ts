@@ -1,20 +1,17 @@
-"use strict";
-
-const framebuffer = require("./framebuffer");
-const fs = require("fs");
+import * as fs from "fs";
+import { Framebuffer } from "./framebuffer";
 
 const BMP_HEADER = [ 0x42, 0x4d ];
 const HEADER_SIZE = 14;
 
 // read a BMP file into a framebuffer
-function readBmp(filename) {
-  const data = typeof filename == "string" ? fs.readFileSync(filename) : filename;
+export function readBmp(data: Buffer): Framebuffer {
   if (data[0] != BMP_HEADER[0] || data[1] != BMP_HEADER[1]) {
-    throw new Error(`Not a BMP file: ${filename}`);
+    throw new Error(`Not a BMP file`);
   }
 
-  const dataOffset = data.readUInt32LE(10)
-  let pixelWidth = data.readInt32LE(HEADER_SIZE + 4);
+  const dataOffset = data.readUInt32LE(10);
+  const pixelWidth = data.readInt32LE(HEADER_SIZE + 4);
   let pixelHeight = data.readInt32LE(HEADER_SIZE + 8);
   let topToBottom = false;
   if (pixelHeight < 0) {
@@ -27,7 +24,7 @@ function readBmp(filename) {
     throw new Error("I'm out of my depth.");
   }
 
-  const fb = new framebuffer.Framebuffer(pixelWidth, pixelHeight, colorDepth);
+  const fb = new Framebuffer(pixelWidth, pixelHeight, colorDepth);
   let offset = dataOffset;
   for (let y = 0; y < pixelHeight; y++) {
     const rowOffset = offset;
@@ -35,11 +32,11 @@ function readBmp(filename) {
     for (let x = 0; x < pixelWidth; x++) {
       switch (colorDepth) {
         case 32:
-          fb.putPixel(x, py, data.readUInt32LE(offset) & 0xffffff);
+          fb.setPixel(x, py, data.readUInt32LE(offset));
           offset += 4;
           break;
         case 24:
-          fb.putPixel(x, py, data.readUInt16LE(offset) | (data.readUInt8(offset + 2) << 16));
+          fb.setPixel(x, py, data.readUInt16LE(offset) | (data.readUInt8(offset + 2) << 16) | 0xff000000);
           offset += 3;
           break;
       }
@@ -51,13 +48,13 @@ function readBmp(filename) {
   return fb;
 }
 
-function writeBmp(framebuffer) {
-  const header = new Buffer(54);
+export function writeBmp(framebuffer: Framebuffer): Buffer {
+  const header = new Buffer(70);
   header.writeUInt8(BMP_HEADER[0], 0);
   header.writeUInt8(BMP_HEADER[1], 1);
   header.writeUInt32LE(0, 6);
   header.writeUInt32LE(header.length, 10); // offset of actual data
-  header.writeUInt32LE(40, 14); // size of 2nd header
+  header.writeUInt32LE(56, 14); // size of 2nd header
   header.writeUInt32LE(framebuffer.width, 18);
   header.writeUInt32LE(framebuffer.height, 22);
   header.writeUInt16LE(1, 26);  // "color planes"
@@ -68,7 +65,14 @@ function writeBmp(framebuffer) {
   header.writeUInt32LE(0, 42);  // pixels per meter?
   header.writeUInt32LE(0, 46);  // palette color count
   header.writeUInt32LE(0, 50);  // "important" color count
-  const rows = [];
+
+  // alpha channel crap:
+  header.writeUInt32LE(0x00ff0000, 54);  // red
+  header.writeUInt32LE(0x0000ff00, 58);  // green
+  header.writeUInt32LE(0x000000ff, 62);  // blue
+  header.writeUInt32LE(0xff000000, 66);  // alpha
+
+  const rows: Buffer[] = [];
   for (let y = 0; y < framebuffer.height; y++) {
     const buffer = new Buffer(Math.ceil(framebuffer.colorDepth * framebuffer.width / 32) * 4);
     buffer.fill(0);
@@ -77,7 +81,7 @@ function writeBmp(framebuffer) {
       const pixel = framebuffer.getPixel(x, y);
       switch (framebuffer.colorDepth) {
         case 32:
-          buffer.writeUInt32LE(pixel | 0xff000000, offset);
+          buffer.writeUInt32LE(pixel, offset);
           break;
         case 24:
           buffer.writeUInt16LE(pixel & 0xffff, offset);
@@ -92,7 +96,3 @@ function writeBmp(framebuffer) {
   header.writeUInt32LE(header.length + rows.map(row => row.length).reduce((a, b) => a + b), 2);
   return Buffer.concat([ header ].concat(rows.reverse()));
 }
-
-
-exports.readBmp = readBmp;
-exports.writeBmp = writeBmp;

@@ -1,6 +1,0 @@
-load "coffee"
-load "mocha"
-
-settings.clean = [ "lib" ]
-settings.distclean = [ "node_modules" ]
-

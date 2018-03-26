@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    "lib": [ "esnext" ],
+    "strict": true,
+    "sourceMap": true,
+    "noImplicitReturns": true,
+    "rootDir": "src/",
+    "outDir": "lib/",
+    "declaration": true,
+    "declarationDir": "lib/"
+  }
+}
