@@ -67,7 +67,7 @@ export function exportC(name: string, font: BitmapFont, options: ExportOptions =
   text += `const int ${name}_font_height = ${font.cellHeight};\n`;
   if (font.isMonospace) text += `const int ${name}_font_width = ${font.maxCellWidth()};\n`;
   if (options.includeOffsets) {
-    text += `const int ${name}_font_offsets[${glyphData.length + 1}] = { ${offsets.join(", ")} };\n`;
+    text += `\nconst int ${name}_font_offsets[${glyphData.length + 1}] = { ${offsets.join(", ")} };\n`;
   }
   text += "\n";
   text += `const ${datatype} ${name}_font_data[${offsets[offsets.length - 1]}] = {\n`;
@@ -109,7 +109,7 @@ export function exportRust(name: string, font: BitmapFont, options: ExportOption
   text += `${dead}pub const FONT_HEIGHT: usize = ${font.cellHeight};\n`;
   if (font.isMonospace) text += `${dead}pub const FONT_WIDTH: usize = ${font.maxCellWidth()};\n`;
   if (options.includeOffsets) {
-    text += `${dead}pub const FONT_OFFSETS: [usize; ${glyphData.length + 1}] = [ ${offsets.join(", ")} ];\n`;
+    text += `\n${dead}pub const FONT_OFFSETS: [usize; ${glyphData.length + 1}] = [ ${offsets.join(", ")} ];\n`;
   }
   text += "\n";
   text += `${dead}pub const FONT_DATA: [${datatype}; ${offsets[offsets.length - 1]}] = [\n`;
