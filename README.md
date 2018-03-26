@@ -48,7 +48,7 @@ Font-problems will generate a simple unicode mapping table for PSF files, which 
 Three sample fonts are included, in the [fonts/](./fonts/) folder:
 
 - "Tom Thumb" is from [my blog](http://robey.lag.net/2010/01/23/tiny-monospace-font.html), with some line-drawing and block characters added, for console tools like Midnight Commander. Each cell is 4x6, which I believe is the smallest a bitmap font can be while still having any legibility.
-    - <img src="./fonts/tom-thumb-256-sample.bmp">
+    - <img src="./fonts/tom-thumb-256-sample.bmp" width="208" height="44">
 
 - "Lola" is a simple proportional font, ranging from 4x8 to 6x8, in ASCII only. It was designed to work on LED matrix displays like [this one](https://learn.adafruit.com/32x16-32x32-rgb-led-matrix).
 
