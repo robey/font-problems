@@ -1,0 +1,201 @@
+# put unused glyphs way up here for now
++ff00
+
+# ascii
+20: 20
+21: 21
+22: 22
+23: 23
+24: 24
+25: 25
+26: 26
+27: 27
+28: 28
+29: 29
+2a: 2a
+2b: 2b
+2c: 2c
+2d: 2d
+2e: 2e
+2f: 2f
+30: 30
+31: 31
+32: 32
+33: 33
+34: 34
+35: 35
+36: 36
+37: 37
+38: 38
+39: 39
+3a: 3a
+3b: 3b
+3c: 3c
+3d: 3d
+3e: 3e
+3f: 3f
+40: 40
+41: 41
+42: 42
+43: 43
+44: 44
+45: 45
+46: 46
+47: 47
+48: 48
+49: 49
+4a: 4a
+4b: 4b
+4c: 4c
+4d: 4d
+4e: 4e
+4f: 4f
+50: 50
+51: 51
+52: 52
+53: 53
+54: 54
+55: 55
+56: 56
+57: 57
+58: 58
+59: 59
+5a: 5a
+5b: 5b
+5c: 5c
+5d: 5d
+5e: 5e
+5f: 5f
+60: 60
+61: 61
+62: 62
+63: 63
+64: 64
+65: 65
+66: 66
+67: 67
+68: 68
+69: 69
+6a: 6a
+6b: 6b
+6c: 6c
+6d: 6d
+6e: 6e
+6f: 6f
+70: 70
+71: 71
+72: 72
+73: 73
+74: 74
+75: 75
+76: 76
+77: 77
+78: 78
+79: 79
+7a: 7a
+7b: 7b
+7c: 7c
+7d: 7d
+7e: 7e
+
+# misc symbols
+a0: 2026  # ellipsis
+a1: a1    # ¡
+# currency
+a2: a2
+a3: a3
+a4: 20ac
+a5: a5
+a6: 20b9
+# misc symbols
+a7: a9    # copyright
+a8: 2022  # bullet
+#
+aa: d7    # multiply
+ab: c1    # +/-
+#
+#
+#
+af: f7    # divide
+b0: b0    # degrees
+#
+b2: b2    # superscript 2
+b3: b3    # superscript 3
+#
+b5: b5    # micro
+#
+b7: ae    # reserved
+b8: b7    # tiny dot
+#
+#
+#
+bc: ab    # <<
+#
+be: bb    # >>
+bf: bf    # ¿
+
+# accented letters (uppercase)
+c0: c0
+c1: c1
+c2: c2
+c3: c3
+c4: c4
+c5: c5
+c6: c8
+c7: c9
+c8: ca
+c9: cb
+ca: cc
+cb: cd
+cc: ce
+cd: cf
+ce: c7
+cf: d1
+d0: d2
+d1: d3
+d2: d4
+d3: d5
+d4: d6
+d5: d8
+d6: d9
+d7: da
+d8: db
+d9: 168
+da: dc
+db: dd
+dc: 178
+dd: d0
+de: de
+# accented letters (lowercase)
+e0: e0
+e1: e1
+e2: e2
+e3: e3
+e4: e4
+e5: e5
+e6: e8
+e7: e9
+e8: ea
+e9: eb
+ea: ec
+eb: ed
+ec: ee
+ed: ef
+ee: e7
+ef: f1
+f0: f2
+f1: f3
+f2: f4
+f3: f5
+f4: f6
+f5: f8
+f6: f9
+f7: fa
+f8: fb
+f9: 169
+fa: fc
+fb: fd
+fc: ff
+fd: f0
+fe: fe
+ff: df
