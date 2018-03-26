@@ -29,7 +29,7 @@ A font in BMP format is a regular grid of glyphs. You can specify the glyph dime
 
 Glyphs that aren't as wide as the cell should be pushed up against the left edge. For proportional fonts, font-problems will detect the whitespace on the right edge, and remove it.
 
-## Header files
+### Header files
 
 "Header file" format is a C or Rust header file with one constant each for the glyph width (monospace only) and height, an array of cell data.
 
@@ -37,7 +37,7 @@ For proportional fonts, there's also an array of offsets for indexing. The cell 
 
 Each int is a single row or column of pixels, in LSB or MSB order. LSB (the default) means the left or top pixel is in the least-significant bit.
 
-## PSF files
+### PSF files
 
 PSF file format is described here: http://www.win.tue.nl/~aeb/linux/kbd/font-formats-1.html
 
