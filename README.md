@@ -31,7 +31,7 @@ Glyphs that aren't as wide as the cell should be pushed up against the left edge
 
 ### Header files
 
-"Header file" format is a C or Rust header file with one constant each for the glyph width (monospace only) and height, an array of cell data.
+"Header file" format is a C or Rust header file with one constant each for the glyph width (monospace only) and height, an array of cell data. You can use these to directly include a bitmap font in the source for your project.
 
 For proportional fonts, there's also an array of offsets for indexing. The cell data for character _n_ starts at `offset[n]` (inclusive) and goes through `offset[n + 1]` (exclusive))
 
