@@ -51,6 +51,7 @@ Three sample fonts are included, in the [fonts/](./fonts/) folder:
     - <img src="./fonts/tom-thumb-256-sample.bmp" width="208" height="44">
 
 - "Lola" is a simple proportional font, ranging from 4x8 to 6x8, in ASCII only. It was designed to work on LED matrix displays like [this one](https://learn.adafruit.com/32x16-32x32-rgb-led-matrix).
+    - <img src="./fonts/lola-sample.bmp" width="218" height="56">
 
 - "Oranj" is a 6x8 font inspired by the Apple II, with support for most Latin glyphs.
 
