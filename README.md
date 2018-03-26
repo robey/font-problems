@@ -54,7 +54,7 @@ Three sample fonts are included, in the [fonts/](./fonts/) folder:
     - <img src="./fonts/lola-sample.bmp" width="218" height="56">
 
 - "Oranj" is a 6x8 font inspired by the Apple II, with support for most Latin glyphs.
-    - <img src="./fonts/tom-thumb-256-sample.bmp" width="302" height="62">
+    - <img src="./fonts/oranj-sample.bmp" width="302" height="62">
 
 All of these fonts are licensed as Creative Commons "share & adapt": http://creativecommons.org/licenses/by/4.0/
 
