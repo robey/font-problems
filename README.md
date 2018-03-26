@@ -3,7 +3,7 @@ font-problems
 
 font-problems is a command-line tool for reading and writing console bitmap fonts. These are fonts described by a rectangular pixel matrix, used for small hardware projects like light-up signs or low-resolution terminals.
 
-<img src="docs/j-bitmap.png">
+<img src="./docs/j-bitmap.png">
 
 In particular, it can read build a PSF file out of a BMP file, and write a PSF into a BMP file for easy editing. Some examples are in the `fonts/` folder.
 
