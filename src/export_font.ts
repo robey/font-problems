@@ -126,7 +126,7 @@ export function exportRust(name: string, font: BitmapFont, options: ExportOption
     text += "\n";
     const codepoints = codemap.map(c => c[0]).join(", ");
     const codepointsMap = codemap.map(c => c[1]).join(", ");
-    text += `${dead}pub const FONT_CODEPOINTS: [char; ${codemap.length}] = [ ${codepoints} ];\n`;
+    text += `${dead}pub const FONT_CODEPOINTS: [u32; ${codemap.length}] = [ ${codepoints} ];\n`;
     text += "\n";
     text += `${dead}pub const FONT_CODEPOINTS_MAP: [usize; ${codemap.length}] = [ ${codepointsMap} ];\n`
   }
