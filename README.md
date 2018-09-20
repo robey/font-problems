@@ -5,7 +5,7 @@ font-problems is a command-line tool for reading and writing console bitmap font
 
 <img src="./docs/j-bitmap.png">
 
-In particular, it can read build a PSF file out of a BMP file, and write a PSF into a BMP file for easy editing. Some examples are in the `fonts/` folder.
+In particular, it can convert PSF files to and from BMP images, for easy editing, and export them as header files for C or rust projects.
 
 ## Building
 
@@ -31,9 +31,9 @@ Glyphs that aren't as wide as the cell should be pushed up against the left edge
 
 ### Header files
 
-"Header file" format is a C or Rust header file with one constant each for the glyph width (monospace only) and height, an array of cell data. You can use these to directly include a bitmap font in the source for your project.
+"Header file" format is a C or Rust header file with one constant each for the glyph width (monospace only) and height, and an array of cell data. You can use these to directly include a bitmap font in the source for your project.
 
-For proportional fonts, there's also an array of offsets for indexing. The cell data for character _n_ starts at `offset[n]` (inclusive) and goes through `offset[n + 1]` (exclusive))
+For proportional fonts, there's also an array of offsets for indexing. The cell data for character _n_ starts at `offset[n]` (inclusive) and goes through `offset[n + 1]` (exclusive).
 
 Each int is a single row or column of pixels, in LSB or MSB order. LSB (the default) means the left or top pixel is in the least-significant bit.
 
@@ -41,7 +41,7 @@ Each int is a single row or column of pixels, in LSB or MSB order. LSB (the defa
 
 PSF file format is described here: http://www.win.tue.nl/~aeb/linux/kbd/font-formats-1.html
 
-Each glyph must be the same width and height in a PSF file (monospace), and exactly 256 or 512 characters must be defined. BIOS only supports a glyph width of 8, so only framebuffers can use other widths. (Linux still uses BIOS to draw text in a surprising number of cases.)
+Each glyph must be the same width and height in a PSF file (monospace), and exactly 256 or 512 characters must be defined. BIOS only supports a glyph width of 8, so only framebuffers can use other widths.
 
 Font-problems will generate a simple unicode mapping table for PSF files, which you can specify with "--map". This is a text file in a particular format, described here: [PSF map files](docs/psfmap.md)
 
