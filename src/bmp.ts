@@ -49,7 +49,7 @@ export function readBmp(data: Buffer): Framebuffer {
 }
 
 export function writeBmp(framebuffer: Framebuffer): Buffer {
-  const header = new Buffer(70);
+  const header = Buffer.alloc(70);
   header.writeUInt8(BMP_HEADER[0], 0);
   header.writeUInt8(BMP_HEADER[1], 1);
   header.writeUInt32LE(0, 6);
@@ -74,7 +74,7 @@ export function writeBmp(framebuffer: Framebuffer): Buffer {
 
   const rows: Buffer[] = [];
   for (let y = 0; y < framebuffer.height; y++) {
-    const buffer = new Buffer(Math.ceil(framebuffer.colorDepth * framebuffer.width / 32) * 4);
+    const buffer = Buffer.alloc(Math.ceil(framebuffer.colorDepth * framebuffer.width / 32) * 4);
     buffer.fill(0);
     let offset = 0;
     for (let x = 0; x < framebuffer.width; x++) {

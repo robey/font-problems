@@ -37,7 +37,7 @@ export function writePsf(font: BitmapFont, options: PsfOptions = {}): Buffer {
   const rowsize = Math.ceil(cellWidth / 8);
   if (rowsize > 2) throw new Error("I don't support such wide glyphs yet (max 16 pixels)");
   const glyphSize = font.cellHeight * rowsize;
-  const header = new Buffer(PSF_HEADER_SIZE);
+  const header = Buffer.alloc(PSF_HEADER_SIZE);
   header.writeUInt32BE(PSF_MAGIC, 0);
   header.writeUInt32LE(PSF_VERSION, 4);
   header.writeUInt32LE(PSF_HEADER_SIZE, 8);
@@ -52,8 +52,8 @@ export function writePsf(font: BitmapFont, options: PsfOptions = {}): Buffer {
     return sum + glyphCode.reduce((sum2, seq) => sum2 + seq.length * 4, 4);
   }, 0);
   // now write glyph data and unicode data.
-  const data = new Buffer(font.glyphs.length * glyphSize);
-  const mapData = new Buffer(mapSize);
+  const data = Buffer.alloc(font.glyphs.length * glyphSize);
+  const mapData = Buffer.alloc(mapSize);
 
   let index = 0;
   let mapIndex = 0;
