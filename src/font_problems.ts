@@ -4,7 +4,7 @@ import * as path from "path";
 import { BitmapFont, ImportOptions } from "./bitmap_font";
 import { readBmp, writeBmp } from "./bmp";
 import { dumpCodemap, parseCodemap } from "./codemap";
-import { exportAscii, exportC, ExportOptions, exportRust } from "./export_font";
+import { exportAscii, exportBin, exportC, ExportOptions, exportRust } from "./export_font";
 import { Framebuffer } from "./framebuffer";
 import { BitDirection } from "./glyph";
 import { readPsf, writePsf } from "./psf";
@@ -25,6 +25,7 @@ Supported formats are:
     .psf    portable screen font (used by unix terminal consoles)
     .h      C header (output only)
     .rs     Rust header (output only)
+    .bin    raw binary data (output only)
 
 Input options:
     --monospace, -m
@@ -53,11 +54,11 @@ Output options:
     --rowsize <N>
         how many glyphs to draw on each line for BMP
     --vertical
-        when exporting to C or Rust, use vertical columns as the values for
-        each glyph (horizontal rows are default)
-    --big-endian
-        when exporting to C or Rust, write the left or top pixels into the
-        high bits (little-endian, the low bits, is the default)
+        when exporting a source or binary file, use vertical columns as the
+        values for each glyph (horizontal rows are default)
+    --big-endian, -B
+        when exporting a source or binary file, write the left or top pixels
+        into the high bits (little-endian, the low bits, is the default)
     --offsets
         when exporting to C or Rust, include a table of the offsets of each
         glyph in the data table (by default, this only happens with
@@ -67,7 +68,7 @@ Output options:
         mappings
     --datatype <name>
         when exporting to C or Rust, use this named int type for the cell
-        data instead of "unsigend int" in C, or "u8", "u16", "u32" (depending
+        data instead of "unsigned int" in C, or "u8", "u16", "u32" (depending
         on data size) in Rust
     --fg <hex>
         foreground color (default "000000") when writing a BMP file
@@ -104,6 +105,7 @@ const MINIMIST_OPTIONS = {
   alias: {
     m: "monospace",
     v: "verbose",
+    B: "big-endian",
   },
   string: [
     "bg",
@@ -140,8 +142,6 @@ export function main() {
   const outFilename = options._[1];
 
   try {
-    let codemap: string[][] | undefined;
-
     const font = loadFont(options, inFilename);
     verbose(options, `Loaded font ${inFilename}: ${font.glyphs.length} glyphs, ` +
       (font.isMonospace ? "monospace" : "proportional") + `, ${font.maxCellWidth()} x ${font.cellHeight}`);
@@ -238,8 +238,19 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
       return;
     }
 
+    case ".bin": {
+      const bOptions: ExportOptions = { columns: false, direction: BitDirection.LE };
+      if (options.vertical) bOptions.columns = true;
+      if (options["big-endian"]) bOptions.direction = BitDirection.BE;
+      fs.writeFileSync(filename, exportBin(font, bOptions));
+      const endian = bOptions.direction == BitDirection.LE ? "little" : "big";
+      const orientation = bOptions.columns ? "columns" : "rows";
+      verbose(options, `Wrote binary bitmap file (${endian}-endian ${orientation}): ${filename}`);
+      return;
+    }
+
     default:
-      throw new Error(`Unsupported input file type: ${ext}`);
+      throw new Error(`Unsupported output file type: ${ext}`);
   }
 }
 

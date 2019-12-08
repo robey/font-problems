@@ -80,7 +80,7 @@ export function exportC(name: string, font: BitmapFont, options: ExportOptions =
   if (options.includeCodemap) {
     text += "\n/*\n";
     text += " * use binary search on font_codepoints to see if a codepoint is represented.\n";
-    text += " * if it is, use that index into font_codepointsmap to find the glyph index.\n";
+    text += " * if it is, use that index into font_codepoints_map to find the glyph index.\n";
     text += " */\n\n";
     const codepoints = codemap.map(c => c[0]).join(", ");
     const codepointsMap = codemap.map(c => c[1]).join(", ");
@@ -132,6 +132,11 @@ export function exportRust(name: string, font: BitmapFont, options: ExportOption
   }
 
   return text;
+}
+
+export function exportBin(font: BitmapFont, options: ExportOptions = {}): Buffer {
+  const { glyphData } = packCodeExport(font, options);
+  return Buffer.concat(glyphData.map(cell => Buffer.from(cell)));
 }
 
 interface Exported {
