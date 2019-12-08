@@ -1,5 +1,4 @@
-import { arrayGrouped, range } from "./arrays";
-import { defaultCodemap } from "./codemap";
+import { range } from "./arrays";
 import { Framebuffer } from "./framebuffer";
 import { Glyph } from "./glyph";
 
@@ -103,8 +102,8 @@ export class BitmapFont {
 
     if (!(options.cellWidth && options.cellHeight)) {
       const { width, height } = sniffBoundaries(image);
-      options.cellWidth = width;
-      options.cellHeight = height;
+      if (!options.cellWidth) options.cellWidth = width;
+      if (!options.cellHeight) options.cellHeight = height;
     }
     if (options.isMonospace === undefined) options.isMonospace = true;
 
