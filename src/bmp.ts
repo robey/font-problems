@@ -1,4 +1,3 @@
-import * as fs from "fs";
 import { Framebuffer } from "./framebuffer";
 
 const BMP_HEADER = [ 0x42, 0x4d ];
