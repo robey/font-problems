@@ -123,7 +123,7 @@ b2: b2    # superscript 2
 b3: b3    # superscript 3
 #
 b5: b5    # micro
-#
+b6: 3a0   # pi
 b7: ae    # reserved
 b8: b7    # tiny dot
 #
