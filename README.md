@@ -58,7 +58,7 @@ Three sample fonts are included, in the [fonts/](./fonts/) folder:
 - "Oranj" is a 6x8 monospace font inspired by the Apple II, with support for most Latin glyphs.
     - <img src="./fonts/oranj-sample.bmp" width="302" height="62">
 
-- "Bizcat" is an 8x16 monospace font suitable for 1980s home computers and 640x480 displays, inspired by wanting to replace the stuffy IBM PC default console font.
+- "Bizcat" is an 8x16 monospace font suitable for 1980s home computers and 640x480 displays, with support for most Latin glyphs, inspired by wanting to replace the stuffy IBM PC default console font.
     - <img src="./fonts/bizcat-sample.bmp" width="216" height="48">
 
 All of these fonts are licensed as Creative Commons "share & adapt": http://creativecommons.org/licenses/by/4.0/
