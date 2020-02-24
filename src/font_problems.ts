@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as minimist from "minimist";
 import * as path from "path";
+import { read_bdf } from "./bdf";
 import { BitmapFont, ImportOptions } from "./bitmap_font";
 import { readBmp, writeBmp } from "./bmp";
 import { dumpCodemap, parseCodemap } from "./codemap";
@@ -77,6 +78,8 @@ Output options:
     --sample <text>
         instead of writing a BMP of the font contents, write a BMP of some
         sample text
+    --margin <N>
+        when drawing sample text, leave an N-pixel margin around the edge
     --scale <N>
         turn each pixel into an NxN square in the output
 
@@ -96,6 +99,7 @@ const MINIMIST_OPTIONS = {
     bg: "ffffff",
     codemap: false,
     fg: "000000",
+    margin: "0",
     monospace: false,
     reversed: false,
     rowsize: "16",
@@ -149,7 +153,7 @@ export function main() {
     if (options.scale) font.scale(parseInt(options.scale, 10));
 
     if (outFilename) {
-      if (options.sample) {
+      if (options.sample !== undefined) {
         const fb = writeSample(options, font, options.sample);
         fs.writeFileSync(outFilename, writeBmp(fb));
         verbose(options, `Wrote sample text (${fb.width} x ${fb.height}) to file: ${outFilename}`);
@@ -177,6 +181,9 @@ function loadFont(options: minimist.ParsedArgs, filename: string, ext?: string):
   switch (ext) {
     case ".psf":
       return readPsf(fs.readFileSync(filename));
+
+    case ".bdf":
+      return read_bdf(fs.readFileSync(filename), options.monospace);
 
     case ".bmp":
       const fb = readBmp(fs.readFileSync(filename));
@@ -255,23 +262,24 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
 }
 
 function writeSample(options: minimist.ParsedArgs, font: BitmapFont, text: string): Framebuffer {
-  const lines = text.split(/\n|\\n/);
+  const lines = (text[0] != "@" ? text : fs.readFileSync(text.slice(1)).toString()).split(/\n|\\n/);
   const glyphLines = lines.map(line => {
-    return Array.from(line).map(char => font.find(char) || font.find("\ufffd") || font.glyphs[0]);
+    return [...line].map(char => font.find(char) || font.find("\ufffd") || font.glyphs[0]);
   });
 
   const fg = parseInt(options.fg, 16), bg = parseInt(options.bg, 16);
+  const margin = parseInt(options.margin);
   const width = Math.max(...glyphLines.map(glyphLine => glyphLine.reduce((sum, glyph) => {
     return sum + glyph.width + (font.isMonospace ? 0 : 1);
   }, 0)));
   const height = glyphLines.length * font.cellHeight;
 
-  const fb = new Framebuffer(width, height, 24);
+  const fb = new Framebuffer(width + 2 * margin, height + 2 * margin, 24);
   fb.fill(bg);
 
-  let y = 0;
+  let y = margin;
   glyphLines.forEach(glyphLine => {
-    let x = 0;
+    let x = margin;
     glyphLine.forEach(glyph => {
       glyph.draw(fb.view(x, y, x + glyph.width, y + glyph.height), fg, bg);
       x += glyph.width + (font.isMonospace ? 0 : 1);

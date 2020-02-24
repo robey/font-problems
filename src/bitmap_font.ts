@@ -27,7 +27,7 @@ export class BitmapFont {
   codemap: string[][] = [];
   cellHeight = 0;
 
-  constructor(public isMonospace: boolean = false) {
+  constructor(public isMonospace: boolean = true) {
     // pass
   }
 
@@ -41,6 +41,7 @@ export class BitmapFont {
 
   add(glyph: Glyph, codes: string[]) {
     if (this.cellHeight == 0) this.cellHeight = glyph.height;
+    if (this.isMonospace && glyph.width != this.maxCellWidth()) this.isMonospace = false;
     this.glyphs.push(glyph);
     this.codemap.push(codes);
   }
