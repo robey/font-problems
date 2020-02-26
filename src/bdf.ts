@@ -57,7 +57,6 @@ export function read_bdf(buffer: Uint8Array, monospace: boolean): BitmapFont {
       // hackity hack-hack: if the y offset is positive instead of negative,
       // it means "assume the presence of N missing rows of all zeros".
       while (rows.length < box_height) rows.push(0);
-      console.log(monospace, box_width, current_glyph.codePointAt(0), rows.map(n => n.toString(16)))
       font.add(Glyph.fromRows(rows, monospace ? box_width : current_width, BitDirection.BE), [ current_glyph ]);
     } else if (keyword == "ENDCHAR") {
       current_glyph = String.fromCodePoint((current_glyph.codePointAt(0) ?? 0) + 1);
