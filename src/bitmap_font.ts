@@ -85,6 +85,18 @@ export class BitmapFont {
     return fb;
   }
 
+  find_duplicates() {
+    for (let i = 0; i < this.glyphs.length - 1; i++) {
+      for (let j = i + 1; j < this.glyphs.length; j++) {
+        if (this.glyphs[i].is_identical_to(this.glyphs[j])) {
+          this.codemap[i].concat(this.codemap[j]);
+          this.codemap.splice(j, 1);
+          this.glyphs.splice(j, 1);
+        }
+      }
+    }
+  }
+
   /*
    * load a bitmap font from a framebuffer.
    *

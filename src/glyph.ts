@@ -14,8 +14,17 @@ export class Glyph {
     // pass
   }
 
+  is_identical_to(g: Glyph): boolean {
+    return this.width == g.width && this.height == g.height && this.data.length == g.data.length &&
+      range(0, this.data.length).every(i => g.data[i] == this.data[i]);
+  }
+
   get rawHex(): string {
     return range(0, this.data.length).map(i => ("0" + this.data[i].toString(16)).slice(-2)).join("");
+  }
+
+  debug(): string {
+    return range(0, this.height).map(y => range(0, this.width).map(x => this.getPixel(x, y) ? "@" : " ").join("")).join(",");
   }
 
   getPixel(x: number, y: number): boolean {

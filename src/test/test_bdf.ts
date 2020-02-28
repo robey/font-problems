@@ -16,8 +16,25 @@ describe("bdf", () => {
     const font = read_bdf(bdf, true);
     font.find("!")?.rawHex.should.eql("222000");
     font.find("\"")?.rawHex.should.eql("550000");
+    font.find("-")?.rawHex.should.eql("000700");
+    font.find("_")?.rawHex.should.eql("007000");
     font.find("7")?.rawHex.should.eql("471200");
     font.find("A")?.rawHex.should.eql("525700");
-    font.find("x")?.rawHex.should.eql("250500");
+    font.find("x")?.rawHex.should.eql("505200");
+  });
+
+  it("parse some edge cases", () => {
+    const bdf = fs.readFileSync("./src/test/data/steinbeck.bdf");
+    const font = read_bdf(bdf, false);
+    font.find(" ")?.width.should.eql(1);
+    font.find(" ")?.debug().should.eql(" , , , , , , , ");
+    font.find("!")?.width.should.eql(1);
+    font.find("!")?.debug().should.eql(" ,@,@,@,@, ,@, ");
+    font.find("#")?.width.should.eql(5);
+    font.find("#")?.debug().should.eql("     ,     , @ @ ,@@@@@, @ @ ,@@@@@, @ @ ,     ");
+    font.find("'")?.width.should.eql(1);
+    font.find("'")?.debug().should.eql(" ,@,@, , , , , ");
+    font.find("1")?.width.should.eql(3);
+    font.find("1")?.debug().should.eql("   ,  @, @@,  @,  @,  @,  @,   ");
   });
 });
