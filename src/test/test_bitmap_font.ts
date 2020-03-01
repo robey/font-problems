@@ -22,7 +22,7 @@ describe("BitmapFont", () => {
 
   it("reads a normal cell", () => {
     const font = new BitmapFont();
-    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 6, 6), true), [ "x" ]);
+    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 6, 6), true), [ "x".codePointAt(0) ?? 0 ]);
     font.cellHeight.should.eql(6);
     const glyph = font.glyphs[0];
     if (!glyph) throw new Error("uhhhhh");
@@ -43,7 +43,7 @@ describe("BitmapFont", () => {
 
   it("trims a proportional font", () => {
     const font = new BitmapFont();
-    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 5, 6), false), [ "x" ]);
+    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 5, 6), false), [ "x".codePointAt(0) ?? 0 ]);
     font.cellHeight.should.eql(6);
     const glyph = font.glyphs[0];
     if (!glyph) throw new Error("uhhhhh");
@@ -63,7 +63,7 @@ describe("BitmapFont", () => {
 
   it("doesn't trim a monospace font", () => {
     const font = new BitmapFont(true);
-    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 3, 3), true), [ "x" ]);
+    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 3, 3), true), [ "x".codePointAt(0) ?? 0 ]);
     font.cellHeight.should.eql(3);
     const glyph = font.glyphs[0];
     if (!glyph) throw new Error("uhhhhh");
@@ -135,8 +135,8 @@ describe("BitmapFont", () => {
 
   it("addFromRows", () => {
     const font = new BitmapFont(true);
-    font.add(Glyph.fromRows([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ], 4, BitDirection.LE), [ "E" ]);
-    font.add(Glyph.fromRows([ 0x20, 0x20, 0x20, 0xa0, 0x40, 0 ], 4, BitDirection.BE), [ "J" ]);
+    font.add(Glyph.fromRows([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ], 4, BitDirection.LE), [ "E".codePointAt(0) ?? 0 ]);
+    font.add(Glyph.fromRows([ 0x20, 0x20, 0x20, 0xa0, 0x40, 0 ], 4, BitDirection.BE), [ "J".codePointAt(0) ?? 0 ]);
     const ee = font.find("E");
     const jay = font.find("J");
     if (!ee || !jay) throw new Error("uhhhhh");
@@ -147,8 +147,8 @@ describe("BitmapFont", () => {
 
   it("addFromColumns", () => {
     const font = new BitmapFont(true);
-    font.add(Glyph.fromColumns([ 0x1f, 0x15, 0x15, 0 ], 6, BitDirection.LE), [ "E" ]);
-    font.add(Glyph.fromColumns([ 0x10, 0x08, 0xf0, 0 ], 6, BitDirection.BE), [ "J" ]);
+    font.add(Glyph.fromColumns([ 0x1f, 0x15, 0x15, 0 ], 6, BitDirection.LE), [ "E".codePointAt(0) ?? 0 ]);
+    font.add(Glyph.fromColumns([ 0x10, 0x08, 0xf0, 0 ], 6, BitDirection.BE), [ "J".codePointAt(0) ?? 0 ]);
 
     const ee = font.find("E");
     const jay = font.find("J");

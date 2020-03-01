@@ -26,7 +26,7 @@ export function exportAscii(font: BitmapFont, lineWidth: number = 80): string[] 
     px += width;
 
     if (!buffer[py + font.cellHeight]) buffer[py + font.cellHeight] = [];
-    const label = (font.codemap[index][0].codePointAt(0) || 0).toString(16);
+    const label = (font.codemap[index][0] ?? 0xffff).toString(16);
     buffer[py + font.cellHeight].push(label);
     range(label.length, width).forEach(_ => buffer[py + font.cellHeight].push(" "));
   });
@@ -170,10 +170,10 @@ function packCodeExport(font: BitmapFont, options: ExportOptions = {}): Exported
     return data;
   });
 
-  // turn into list of [ glyph id, codes... ], ignoring multi-char strings
+  // turn into list of [ glyph id, codes... ]
   const codemap: [ number, number ][] = [];
   font.codemap.forEach((codes, i) => {
-    codes.filter(s => s.length == 1).map(s => s.charCodeAt(0)).forEach(code => {
+    codes.forEach(code => {
       codemap.push([ code, i ]);
     });
   });

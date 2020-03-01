@@ -23,8 +23,8 @@ export class Glyph {
     return range(0, this.data.length).map(i => ("0" + this.data[i].toString(16)).slice(-2)).join("");
   }
 
-  debug(): string {
-    return range(0, this.height).map(y => range(0, this.width).map(x => this.getPixel(x, y) ? "@" : " ").join("")).join(",");
+  debug(joiner: string = "\n"): string {
+    return range(0, this.height).map(y => range(0, this.width).map(x => this.getPixel(x, y) ? "@" : " ").join("")).join(joiner);
   }
 
   getPixel(x: number, y: number): boolean {

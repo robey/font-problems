@@ -31,6 +31,7 @@ export interface PsfOptions {
 
 export function writePsf(font: BitmapFont, options: PsfOptions = {}): Buffer {
   const withMap = options.withMap || false;
+  font.remove_dead();
 
   // PSF files are monospace, so all chars have the same width.
   const cellWidth = font.maxCellWidth();
@@ -48,9 +49,7 @@ export function writePsf(font: BitmapFont, options: PsfOptions = {}): Buffer {
   header.writeUInt32LE(cellWidth, 28);
 
   // worst-case map size
-  const mapSize = font.codemap.reduce((sum, glyphCode) => {
-    return sum + glyphCode.reduce((sum2, seq) => sum2 + seq.length * 4, 4);
-  }, 0);
+  const mapSize = font.codemap.reduce((sum, codepoints) => sum + codepoints.length * 4, 0);
   // now write glyph data and unicode data.
   const data = Buffer.alloc(font.glyphs.length * glyphSize);
   const mapData = Buffer.alloc(mapSize);
@@ -68,20 +67,10 @@ export function writePsf(font: BitmapFont, options: PsfOptions = {}): Buffer {
     });
 
     if (withMap) {
-      const glyphCode = font.codemap[i];
-      const shorts = glyphCode.filter(s => s.length == 1);
-      const longs = glyphCode.filter(s => s.length > 1);
-
-      const put = (s: string) => {
-        const b = Buffer.from(s, "UTF-8");
+      font.codemap[i].forEach(codepoint => {
+        const b = Buffer.from(String.fromCodePoint(codepoint), "UTF-8");
         b.copy(mapData, mapIndex);
         mapIndex += b.length;
-      };
-      shorts.forEach(put);
-      longs.forEach(s => {
-        mapData[mapIndex] = PSF_UNICODE_STARTSEQ;
-        mapIndex++;
-        put(s);
       });
       mapData[mapIndex] = PSF_UNICODE_SEPARATOR;
       mapIndex++;
@@ -111,7 +100,7 @@ export function readPsf(buffer: Buffer): BitmapFont {
   if (rowsize > 2) throw new Error("I don't support such wide glyphs yet (max 16 pixels)");
 
   const font = new BitmapFont(true);
-  const codemap: string[][] = (flags & PSF_FLAG_HAS_UNICODE_TABLE) > 0 ?
+  const codemap: number[][] = (flags & PSF_FLAG_HAS_UNICODE_TABLE) > 0 ?
     readUnicodeTable(new Position(buffer, headerSize + glyphCount * glyphSize), glyphCount, true) :
     defaultCodemap(glyphCount);
 
@@ -134,7 +123,7 @@ function readVersion1(buffer: Buffer): BitmapFont {
   const glyphCount = (mode & PSF1_MODE512) > 0 ? 512 : 256;
 
   const font = new BitmapFont(true);
-  const codemap: string[][] = (mode & PSF1_MODEHASTAB) > 0 ?
+  const codemap: number[][] = (mode & PSF1_MODEHASTAB) > 0 ?
     readUnicodeTable(new Position(buffer, 4 + glyphCount * glyphSize), glyphCount, false) :
     defaultCodemap(glyphCount);
 
@@ -155,35 +144,22 @@ class Position {
   }
 }
 
-function readUnicodeTable(pos: Position, count: number, utf8: boolean): string[][] {
+function readUnicodeTable(pos: Position, count: number, utf8: boolean): number[][] {
   return range(0, count).map(i => {
     // each glyph has a sequence of code points, optionally followed by a
-    // sequnce of (STARTSEQ codepoint*), followed by SEPARATOR.
-    const points: string[] = [];
+    // sequence of (STARTSEQ codepoint*), followed by SEPARATOR.
+    const points: number[] = [];
     let inSeq = false;
-    let seq: number[] = [];
 
     while (true) {
       const cp = readCodepoint(pos, utf8);
+      if (cp == PSF1_UNICODE_SEPARATOR) break;
       if (inSeq) {
-        if (cp == PSF1_UNICODE_SEPARATOR) {
-          points.push(String.fromCodePoint(...seq));
-          break;
-        }
-        if (cp == PSF1_UNICODE_STARTSEQ) {
-          points.push(String.fromCodePoint(...seq));
-          seq = [];
-        } else {
-          seq.push(cp);
-        }
+        // ignore sequences, nobody uses them and they're broken
+      } else if (cp == PSF1_UNICODE_STARTSEQ) {
+        inSeq = true;
       } else {
-        if (cp == PSF1_UNICODE_SEPARATOR) break;
-        if (cp == PSF1_UNICODE_STARTSEQ) {
-          inSeq = true;
-          seq = [];
-        } else {
-          points.push(String.fromCodePoint(cp));
-        }
+        points.push(cp);
       }
     }
     return points;

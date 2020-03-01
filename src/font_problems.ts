@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as minimist from "minimist";
 import * as path from "path";
-import { read_bdf } from "./bdf";
+import { read_bdf, write_bdf } from "./bdf";
 import { BitmapFont, ImportOptions } from "./bitmap_font";
 import { readBmp, writeBmp } from "./bmp";
 import { dumpCodemap, parseCodemap } from "./codemap";
@@ -24,6 +24,7 @@ different format. Formats are normally inferred from the filename extension.
 Supported formats are:
     .bmp    grid of glyphs
     .psf    portable screen font (used by unix terminal consoles)
+    .bdf    bitmap distribution format (used by X11 and many others)
     .h      C header (output only)
     .rs     Rust header (output only)
     .bin    raw binary data (output only)
@@ -82,6 +83,9 @@ Output options:
         when drawing sample text, leave an N-pixel margin around the edge
     --scale <N>
         turn each pixel into an NxN square in the output
+    --sort
+        split out each codepoint into its own glyph (even when it's the same
+        as another) and sort by codepoint
 
 Examples:
     font-problems -m tom-thumb.bmp --ascii
@@ -98,6 +102,7 @@ const MINIMIST_OPTIONS = {
     ascii: false,
     bg: "ffffff",
     codemap: false,
+    debug: false,
     fg: "000000",
     margin: "0",
     monospace: false,
@@ -126,6 +131,7 @@ const MINIMIST_OPTIONS = {
     "ascii",
     "big-endian",
     "codemap",
+    "debug",
     "monospace",
     "offsets",
     "reversed",
@@ -151,6 +157,18 @@ export function main() {
       (font.isMonospace ? "monospace" : "proportional") + `, ${font.maxCellWidth()} x ${font.cellHeight}`);
 
     if (options.scale) font.scale(parseInt(options.scale, 10));
+    if (options.sort) font.sort();
+
+    if (options.debug) {
+      font.remove_dead();
+      font.remove_dead();
+      for (let i = 0; i < font.glyphs.length; i++) {
+        const points = font.codemap[i].map(cp => cp.toString(16)).join(", ");
+        console.log(`${points}:`);
+        console.log(font.glyphs[i].debug());
+        console.log("");
+      }
+    }
 
     if (outFilename) {
       if (options.sample !== undefined) {
@@ -206,6 +224,11 @@ function saveFont(options: minimist.ParsedArgs, font: BitmapFont, filename: stri
     case ".psf":
       fs.writeFileSync(filename, writePsf(font, { withMap: true }));
       verbose(options, `Wrote PSF file: ${filename}`);
+      return;
+
+    case ".bdf":
+      fs.writeFileSync(filename, write_bdf(font, path.basename(filename)));
+      verbose(options, `Wrote BDF file: ${filename}`);
       return;
 
     case ".bmp": {

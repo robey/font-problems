@@ -7,9 +7,9 @@ import "source-map-support/register";
 describe("codemap", () => {
   it("dumpCodemap", () => {
     const map = [
-      [ "@" ], [ "A" ], [ "B" ], [ "C" ],
-      [ "D", "d" ],
-      [ "E", "ex" ]
+      [ 64 ], [ 65 ], [ 66 ], [ 67 ],
+      [ 0x44, 0x64 ],
+      [ 0x45, 0x65 ]
     ];
     dumpCodemap(map).should.eql(
       "0: 40\n" +
@@ -17,25 +17,23 @@ describe("codemap", () => {
       "2: 42\n" +
       "3: 43\n" +
       "4: 44, 64\n" +
-      "5: 45, 65;78\n"
+      "5: 45, 65\n"
     );
   });
 
   describe("parseCodemap", () => {
     it("empty", () => {
-      parseCodemap(2, "").should.eql([ [ "\u0000" ], [ "\u0001" ] ]);
-    });
-
-    it("empty with starting point", () => {
-      parseCodemap(2, "+20").should.eql([ [ " " ], [ "!" ] ]);
+      parseCodemap(2, "").should.eql([ [ ], [ ] ]);
     });
 
     it("comments and whitespace", () => {
-      parseCodemap(3, "    # wut\n    +020  \n\n 1 : 0040  \n\n").should.eql([ [ " " ], [ "@" ], [ '"' ] ]);
+      parseCodemap(3, "    # wut\n\n 1 : 0040  \n\n0:20   \n").should.eql([ [ 0x20 ], [ 0x40 ], [ ] ]);
     });
 
-    it("sequences", () => {
-      parseCodemap(3, "0: 41\n1: 42, 62\n2: 43;40, 63").should.eql([ [ "A" ], [ "B", "b" ], [ "C@", "c" ] ]);
+    it("ranges", () => {
+      parseCodemap(10, "0: 41\n1: 42 - 44\n6: 45-47").should.eql([
+        [ 0x41 ], [ 0x42 ], [ 0x43 ], [ 0x44 ], [ ], [ ], [ 0x45 ], [ 0x46 ], [ 0x47 ], [ ]
+      ]);
     });
   });
 

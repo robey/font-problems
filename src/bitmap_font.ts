@@ -24,7 +24,7 @@ export interface ImportOptions {
  */
 export class BitmapFont {
   glyphs: Glyph[] = [];
-  codemap: string[][] = [];
+  codemap: number[][] = [];
   cellHeight = 0;
 
   constructor(public isMonospace: boolean = true) {
@@ -39,7 +39,7 @@ export class BitmapFont {
     return Math.max(...Array.from(this.glyphs).map(g => g.width));
   }
 
-  add(glyph: Glyph, codes: string[]) {
+  add(glyph: Glyph, codes: number[]) {
     if (this.cellHeight == 0) this.cellHeight = glyph.height;
     if (this.isMonospace && glyph.width != this.maxCellWidth()) this.isMonospace = false;
     this.glyphs.push(glyph);
@@ -49,7 +49,7 @@ export class BitmapFont {
   // find the glyph for a character.
   find(code: string): Glyph | undefined {
     for (let i = 0; i < this.codemap.length; i++) {
-      if (this.codemap[i].includes(code)) return this.glyphs[i];
+      if (this.codemap[i].includes(code.codePointAt(0) || 0)) return this.glyphs[i];
     }
     return undefined;
   }
@@ -92,9 +92,47 @@ export class BitmapFont {
           this.codemap[i].concat(this.codemap[j]);
           this.codemap.splice(j, 1);
           this.glyphs.splice(j, 1);
+          j--;
         }
       }
     }
+  }
+
+  // remove any glyphs that have no codepoints (or an invalid one)
+  remove_dead() {
+    for (let i = 0; i < this.glyphs.length; i++) {
+      if (this.codemap[i].length == 0) {
+        this.codemap.splice(i, 1);
+        this.glyphs.splice(i, 1);
+        i--;
+      }
+    }
+  }
+
+  // copy glyphs so that there are dupes, but each has only one codepoint
+  split_out() {
+    for (let i = 0; i < this.glyphs.length; i++) {
+      while (this.codemap[i].length > 1) {
+        const codepoint = this.codemap[i].splice(1, 1);
+        this.codemap.concat(codepoint);
+        this.glyphs.concat(this.glyphs[i]);
+      }
+    }
+  }
+
+  // sort by codepoint
+  sort() {
+    // only works after split_out, so each glyph has one codepoint
+    this.remove_dead();
+    this.split_out();
+    // first, make a single array, so `sort` doesn't poop its pants.
+    const full_array = range(0, this.glyphs.length).map(i => {
+      return [ this.codemap[i][0], this.glyphs[i] ] as [ number, Glyph ]
+    });
+    full_array.sort((a, b) => a[0] - b[0]);
+    // re-inflate
+    this.glyphs = full_array.map(x => x[1]);
+    this.codemap = full_array.map(x => [ x[0] ]);
   }
 
   /*
@@ -129,7 +167,7 @@ export class BitmapFont {
       for (let x = 0; x < charColumns; x++) {
         const px = x * options.cellWidth, py = y * options.cellHeight;
         const view = image.view(px, py, px + options.cellWidth, py + options.cellHeight);
-        font.add(Glyph.fromFramebuffer(view, options.isMonospace), [ String.fromCodePoint(i) ]);
+        font.add(Glyph.fromFramebuffer(view, options.isMonospace), [ i ]);
         i++;
       }
     }
