@@ -19,7 +19,7 @@ export function readBmp(data: Buffer): Framebuffer {
   }
   const colorDepth = data.readUInt16LE(HEADER_SIZE + 14);
 
-  if (colorDepth != 32 && colorDepth != 24) {
+  if (colorDepth != 32 && colorDepth != 24 && colorDepth != 8) {
     throw new Error("I'm out of my depth.");
   }
 
@@ -37,6 +37,10 @@ export function readBmp(data: Buffer): Framebuffer {
         case 24:
           fb.setPixel(x, py, data.readUInt16LE(offset) | (data.readUInt8(offset + 2) << 16) | 0xff000000);
           offset += 3;
+          break;
+        case 8:
+          fb.setPixel(x, py, (data.readUInt8(offset) * 0x10101) | 0xff000000);
+          offset += 1;
           break;
       }
     }

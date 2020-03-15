@@ -5,9 +5,6 @@ import "should";
 import "source-map-support/register";
 
 describe("bdf", () => {
-  it("guess glyph names", () => {
-  });
-
   it("parse tom thumber", () => {
     // from: https://twitter.com/carad0/status/1127632356158865408
     // or: http://carado.moe/up/9c56eef5-tom-thumber.bdf
