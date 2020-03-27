@@ -8,6 +8,7 @@ import { dumpCodemap, parseCodemap } from "./codemap";
 import { exportAscii, exportBin, exportC, ExportOptions, exportRust } from "./export_font";
 import { Framebuffer } from "./framebuffer";
 import { BitDirection } from "./glyph";
+import { importHeader } from "./import_font";
 import { readPsf, writePsf } from "./psf";
 
 import "source-map-support/register";
@@ -25,8 +26,8 @@ Supported formats are:
     .bmp    grid of glyphs
     .psf    portable screen font (used by unix terminal consoles)
     .bdf    bitmap distribution format (used by X11 and many others)
-    .h      C header (output only)
-    .rs     Rust header (output only)
+    .h      C header (output anything, input must be monospace)
+    .rs     Rust header (output anything, input must be monospace)
     .bin    raw binary data (output only)
 
 Input options:
@@ -43,6 +44,13 @@ Input options:
     --map <filename>
         read a "psfmap" file describing the mapping of unicode code-points
         to each glyph (see docs for a description of this format)
+    --vertical
+        with a source or binary file, use vertical columns as the values
+        for each glyph (horizontal rows are default)
+    --pad
+        when importing raw data from a source file, add a blank row or
+        column to each glyph (in case a 6x8 font is encoded as 5x8, for
+        example)
 
 Output options:
     --verbose, -v
@@ -56,8 +64,7 @@ Output options:
     --rowsize <N>
         how many glyphs to draw on each line for BMP
     --vertical
-        when exporting a source or binary file, use vertical columns as the
-        values for each glyph (horizontal rows are default)
+        (same as on input)
     --big-endian, -B
         when exporting a source or binary file, write the left or top pixels
         into the high bits (little-endian, the low bits, is the default)
@@ -106,6 +113,7 @@ const MINIMIST_OPTIONS = {
     fg: "000000",
     margin: "0",
     monospace: false,
+    pad: false,
     reversed: false,
     rowsize: "16",
     termwidth: "80",
@@ -134,6 +142,7 @@ const MINIMIST_OPTIONS = {
     "debug",
     "monospace",
     "offsets",
+    "pad",
     "reversed",
     "verbose",
     "vertical",
@@ -211,6 +220,19 @@ function loadFont(options: minimist.ParsedArgs, filename: string, ext?: string):
       const font = BitmapFont.importFromImage(fb, importOptions);
       if (options.map) font.codemap = parseCodemap(font.glyphs.length, fs.readFileSync(options.map).toString());
       return font;
+
+    case ".c":
+    case ".h":
+    case ".rs":
+      const headerImportOptions = {
+        cellWidth: parseInt(options.width ?? "8", 10),
+        cellHeight: parseInt(options.height ?? "8", 10),
+        columns: options.vertical,
+        pad: options.pad,
+        direction: options["big-endian"] ? BitDirection.BE : BitDirection.LE,
+        logger: (text: string) => verbose(options, text),
+      };
+      return importHeader(fs.readFileSync(filename).toString(), headerImportOptions);
 
     default:
       throw new Error(`Unsupported input file type: ${ext}`);

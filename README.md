@@ -5,7 +5,7 @@ font-problems is a command-line tool for reading and writing console bitmap font
 
 <img src="./docs/j-bitmap.png">
 
-In particular, it can convert PSF files to and from BMP images, for easy editing, and export them as header files for C or rust projects.
+In particular, it can convert between PSF & BDF files and BMP images, for easy editing, and export them as header files for C or rust projects.
 
 ## Building
 
@@ -20,6 +20,7 @@ Supported formats are:
 
     .bmp    grid of glyphs
     .psf    portable screen font (used by Linux and PC DOS)
+    .bdf    bitmap distribution format (popular in the 1990s)
     .h      C header (output only)
     .rs     Rust header (output only)
 
@@ -31,11 +32,13 @@ Glyphs that aren't as wide as the cell should be pushed up against the left edge
 
 ### Header files
 
-"Header file" format is a C or Rust header file with one constant each for the glyph width (monospace only) and height, and an array of cell data. You can use these to directly include a bitmap font in the source for your project.
+"Header file" output format is a C or Rust header file with one constant each for the glyph width (monospace only) and height, and an array of cell data. You can use these to directly include a bitmap font in the source for your project.
 
 For proportional fonts, there's also an array of offsets for indexing. The cell data for character _n_ starts at `offset[n]` (inclusive) and goes through `offset[n + 1]` (exclusive).
 
 Each int is a single row or column of pixels, in LSB or MSB order. LSB (the default) means the left or top pixel is in the least-significant bit.
+
+_Some_ header files can be imported, as well, if you provide the cell width and height on the command line. You may have to massage the file a bit to remove extra lines that confuse the parser.
 
 ### PSF files
 
@@ -44,6 +47,10 @@ PSF file format is described here: http://www.win.tue.nl/~aeb/linux/kbd/font-for
 Each glyph must be the same width and height in a PSF file (monospace), and exactly 256 or 512 characters must be defined. BIOS only supports a glyph width of 8, so only framebuffers can use other widths.
 
 Font-problems will generate a simple unicode mapping table for PSF files, which you can specify with "--map". This is a text file in a particular format, described here: [PSF map files](docs/psfmap.md)
+
+### BDF files
+
+BDF file format is documented by Adobe and X11, and is still in popular use because it's really just a text file with a simple format. Font-problems should be able to read and write these files, though it hasn't had as much testing as the other formats.
 
 ## Sample fonts
 
