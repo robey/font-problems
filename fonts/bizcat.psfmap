@@ -18,6 +18,8 @@ d: 2584
 e: 2592
 
 # f: nothing yet
+# leave a glyph here so that ascii ends up at ascii, which linux needs
+f: 0
 
 # arrows
 10: 2190
@@ -26,6 +28,7 @@ e: 2592
 13: 2193
 
 # 14-1f: nothing yet
+14: 14 - 1f
 
 # ascii
 20: 20 - 7f
