@@ -169,8 +169,7 @@ export function main() {
     if (options.sort) font.sort();
 
     if (options.debug) {
-      font.remove_dead();
-      font.remove_dead();
+      font.removeDead();
       for (let i = 0; i < font.glyphs.length; i++) {
         const points = font.codemap[i].map(cp => cp.toString(16)).join(", ");
         console.log(`${points}:`);

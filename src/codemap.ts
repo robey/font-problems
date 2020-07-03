@@ -43,7 +43,7 @@ export function parseCodemap(count: number, description: string): number[][] {
           codemap[index++].push(start++);
         }
       } else {
-        codemap[index] = codemap[index].concat(right.split(",").map(s => unhex(s.trim())));
+        codemap[index].push(...right.split(",").map(s => unhex(s.trim())));
       }
     } catch (error) {
       process.stderr.write(`Error parsing codemap at line ${lineno + 1}: ${error.message}\n`);

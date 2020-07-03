@@ -49,7 +49,7 @@ export function importHeader(content: string, options: ImportOptions): BitmapFon
         found_data = true;
         if (options.logger) options.logger(`Found data starting at line ${i + 1}`);
       }
-      data = data.concat(fields);
+      data.push(...fields);
     }
   });
 

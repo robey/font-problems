@@ -99,7 +99,7 @@ export function read_bdf(buffer: Uint8Array, monospace: boolean): BitmapFont {
     i++;
   }
 
-  font.find_duplicates();
+  font.findDuplicates();
   return font;
 }
 

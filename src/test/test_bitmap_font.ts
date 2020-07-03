@@ -7,6 +7,12 @@ import { BitDirection, Glyph } from "../glyph";
 import "should";
 import "source-map-support/register";
 
+const CODE_bang = "!".codePointAt(0) ?? 0;
+const CODE_E = "E".codePointAt(0) ?? 0;
+const CODE_J = "J".codePointAt(0) ?? 0;
+const CODE_M = "M".codePointAt(0) ?? 0;
+const CODE_x = "x".codePointAt(0) ?? 0;
+
 describe("BitmapFont", () => {
   const IMAGE = new Framebuffer(8, 8, 24);
   IMAGE.fillData([
@@ -22,7 +28,7 @@ describe("BitmapFont", () => {
 
   it("reads a normal cell", () => {
     const font = new BitmapFont();
-    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 6, 6), true), [ "x".codePointAt(0) ?? 0 ]);
+    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 6, 6), true), [ CODE_x ]);
     font.cellHeight.should.eql(6);
     const glyph = font.glyphs[0];
     if (!glyph) throw new Error("uhhhhh");
@@ -43,7 +49,7 @@ describe("BitmapFont", () => {
 
   it("trims a proportional font", () => {
     const font = new BitmapFont();
-    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 5, 6), false), [ "x".codePointAt(0) ?? 0 ]);
+    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 5, 6), false), [ CODE_x ]);
     font.cellHeight.should.eql(6);
     const glyph = font.glyphs[0];
     if (!glyph) throw new Error("uhhhhh");
@@ -63,7 +69,7 @@ describe("BitmapFont", () => {
 
   it("doesn't trim a monospace font", () => {
     const font = new BitmapFont(true);
-    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 3, 3), true), [ "x".codePointAt(0) ?? 0 ]);
+    font.add(Glyph.fromFramebuffer(IMAGE.view(0, 0, 3, 3), true), [ CODE_x ]);
     font.cellHeight.should.eql(3);
     const glyph = font.glyphs[0];
     if (!glyph) throw new Error("uhhhhh");
@@ -94,8 +100,8 @@ describe("BitmapFont", () => {
     font.isMonospace.should.eql(false);
     font.cellHeight.should.eql(8);
 
-    const em = font.glyphs["M".codePointAt(0) || 0];
-    const bang = font.glyphs["!".codePointAt(0) || 0];
+    const em = font.glyphs[CODE_M];
+    const bang = font.glyphs[CODE_bang];
     if (!em || !bang) throw new Error("uhhhhh");
 
     em.width.should.eql(5);
@@ -135,8 +141,8 @@ describe("BitmapFont", () => {
 
   it("addFromRows", () => {
     const font = new BitmapFont(true);
-    font.add(Glyph.fromRows([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ], 4, BitDirection.LE), [ "E".codePointAt(0) ?? 0 ]);
-    font.add(Glyph.fromRows([ 0x20, 0x20, 0x20, 0xa0, 0x40, 0 ], 4, BitDirection.BE), [ "J".codePointAt(0) ?? 0 ]);
+    font.add(Glyph.fromRows([ 0x7, 0x1, 0x7, 0x1, 0x7, 0 ], 4, BitDirection.LE), [ CODE_E ]);
+    font.add(Glyph.fromRows([ 0x20, 0x20, 0x20, 0xa0, 0x40, 0 ], 4, BitDirection.BE), [ CODE_J ]);
     const ee = font.find("E");
     const jay = font.find("J");
     if (!ee || !jay) throw new Error("uhhhhh");
@@ -147,8 +153,8 @@ describe("BitmapFont", () => {
 
   it("addFromColumns", () => {
     const font = new BitmapFont(true);
-    font.add(Glyph.fromColumns([ 0x1f, 0x15, 0x15, 0 ], 6, BitDirection.LE), [ "E".codePointAt(0) ?? 0 ]);
-    font.add(Glyph.fromColumns([ 0x10, 0x08, 0xf0, 0 ], 6, BitDirection.BE), [ "J".codePointAt(0) ?? 0 ]);
+    font.add(Glyph.fromColumns([ 0x1f, 0x15, 0x15, 0 ], 6, BitDirection.LE), [ CODE_E ]);
+    font.add(Glyph.fromColumns([ 0x10, 0x08, 0xf0, 0 ], 6, BitDirection.BE), [ CODE_J ]);
 
     const ee = font.find("E");
     const jay = font.find("J");
@@ -156,5 +162,26 @@ describe("BitmapFont", () => {
 
     ee.rawHex.should.eql("171707");
     jay.rawHex.should.eql("445402");
+  });
+
+  it("handle duplicates and split out", () => {
+    const font = new BitmapFont(true);
+    font.add(Glyph.fromColumns([ 0x1f, 0x15, 0x15, 0 ], 6, BitDirection.LE), [ CODE_E ]);
+    font.add(Glyph.fromColumns([ 0x10, 0x08, 0xf0, 0 ], 6, BitDirection.BE), [ CODE_J ]);
+    font.add(Glyph.fromColumns([ 0x1f, 0x15, 0x15, 0 ], 6, BitDirection.LE), [ CODE_M ]);
+
+    font.findDuplicates();
+    font.glyphs.length.should.eql(2);
+    font.codemap.should.eql([ [ CODE_E, CODE_M ], [ CODE_J ] ]);
+    (font.find("J")?.rawHex ?? "").should.eql("445402");
+    (font.find("E")?.rawHex ?? "").should.eql("171707");
+    (font.find("M")?.rawHex ?? "").should.eql("171707");
+
+    font.splitOut();
+    font.glyphs.length.should.eql(3);
+    font.codemap.should.eql([ [ CODE_E ], [ CODE_J ], [ CODE_M ] ]);
+    (font.find("J")?.rawHex ?? "").should.eql("445402");
+    (font.find("E")?.rawHex ?? "").should.eql("171707");
+    (font.find("M")?.rawHex ?? "").should.eql("171707");
   });
 });

@@ -85,11 +85,11 @@ export class BitmapFont {
     return fb;
   }
 
-  find_duplicates() {
+  findDuplicates() {
     for (let i = 0; i < this.glyphs.length - 1; i++) {
       for (let j = i + 1; j < this.glyphs.length; j++) {
         if (this.glyphs[i].is_identical_to(this.glyphs[j])) {
-          this.codemap[i].concat(this.codemap[j]);
+          this.codemap[i].push(...this.codemap[j]);
           this.codemap.splice(j, 1);
           this.glyphs.splice(j, 1);
           j--;
@@ -99,7 +99,7 @@ export class BitmapFont {
   }
 
   // remove any glyphs that have no codepoints (or an invalid one)
-  remove_dead() {
+  removeDead() {
     for (let i = 0; i < this.glyphs.length; i++) {
       if (this.codemap[i].length == 0) {
         this.codemap.splice(i, 1);
@@ -110,12 +110,12 @@ export class BitmapFont {
   }
 
   // copy glyphs so that there are dupes, but each has only one codepoint
-  split_out() {
+  splitOut() {
     for (let i = 0; i < this.glyphs.length; i++) {
       while (this.codemap[i].length > 1) {
         const codepoint = this.codemap[i].splice(1, 1);
-        this.codemap.concat(codepoint);
-        this.glyphs.concat(this.glyphs[i]);
+        this.codemap.push(codepoint);
+        this.glyphs.push(this.glyphs[i]);
       }
     }
   }
@@ -123,8 +123,8 @@ export class BitmapFont {
   // sort by codepoint
   sort() {
     // only works after split_out, so each glyph has one codepoint
-    this.remove_dead();
-    this.split_out();
+    this.removeDead();
+    this.splitOut();
     // first, make a single array, so `sort` doesn't poop its pants.
     const full_array = range(0, this.glyphs.length).map(i => {
       return [ this.codemap[i][0], this.glyphs[i] ] as [ number, Glyph ]

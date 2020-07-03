@@ -31,7 +31,7 @@ export interface PsfOptions {
 
 export function writePsf(font: BitmapFont, options: PsfOptions = {}): Buffer {
   const withMap = options.withMap || false;
-  font.remove_dead();
+  font.removeDead();
 
   // PSF files are monospace, so all chars have the same width.
   const cellWidth = font.maxCellWidth();
