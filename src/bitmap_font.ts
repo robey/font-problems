@@ -86,14 +86,17 @@ export class BitmapFont {
   }
 
   findDuplicates() {
-    for (let i = 0; i < this.glyphs.length - 1; i++) {
-      for (let j = i + 1; j < this.glyphs.length; j++) {
-        if (this.glyphs[i].is_identical_to(this.glyphs[j])) {
-          this.codemap[i].push(...this.codemap[j]);
-          this.codemap.splice(j, 1);
-          this.glyphs.splice(j, 1);
-          j--;
-        }
+    const seen = new Map<string, number>();
+    for (let i = 0; i < this.glyphs.length; i++) {
+      const id = this.glyphs[i].identity();
+      const existing = seen.get(id);
+      if (existing !== undefined) {
+        this.codemap[existing].push(...this.codemap[i]);
+        this.codemap.splice(i, 1);
+        this.glyphs.splice(i, 1);
+        i--;
+      } else {
+        seen.set(id, i);
       }
     }
   }

@@ -14,9 +14,8 @@ export class Glyph {
     // pass
   }
 
-  is_identical_to(g: Glyph): boolean {
-    return this.width == g.width && this.height == g.height && this.data.length == g.data.length &&
-      range(0, this.data.length).every(i => g.data[i] == this.data[i]);
+  identity(): string {
+    return `${this.width},${this.height},${this.data.length},${this.rawHex}`;
   }
 
   get rawHex(): string {
