@@ -9,17 +9,16 @@
   "main": "lib/",
   "dependencies": {
     "antsy": "^2.0.0",
-    "minimist": "^1.2.0"
+    "minimist": "^1.2.5"
   },
   "devDependencies": {
     "@types/minimist": "^1.2.0",
-    "@types/mocha": "^2.2.48",
+    "@types/mocha": "^8.0.0",
     "@types/node": "^9.6.55",
-    "@types/should": "^13.0.0",
-    "mocha": "^5.2.0",
-    "should": "^13.2.1",
-    "source-map-support": "^0.5.16",
-    "typescript": "^3.8.2"
+    "mocha": "^8.0.1",
+    "should": "^13.2.3",
+    "source-map-support": "^0.5.19",
+    "typescript": "^3.9.6"
   },
   "files": [
     "lib",
